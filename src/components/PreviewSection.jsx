@@ -5,29 +5,13 @@ const PreviewSection = ({ settings }) => {
   const getAnimationProps = () => {
     switch (settings.animation) {
       case 'fadeIn':
-        return {
-          initial: { opacity: 0 },
-          animate: { opacity: 1 },
-          transition: { duration: 0.8 }
-        };
+        return { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0.8 } };
       case 'slideUp':
-        return {
-          initial: { opacity: 0, y: 50 },
-          animate: { opacity: 1, y: 0 },
-          transition: { duration: 0.8 }
-        };
+        return { initial: { opacity: 0, y: 50 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.8 } };
       case 'slideDown':
-        return {
-          initial: { opacity: 0, y: -50 },
-          animate: { opacity: 1, y: 0 },
-          transition: { duration: 0.8 }
-        };
+        return { initial: { opacity: 0, y: -50 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.8 } };
       case 'zoomIn':
-        return {
-          initial: { opacity: 0, scale: 0.8 },
-          animate: { opacity: 1, scale: 1 },
-          transition: { duration: 0.8 }
-        };
+        return { initial: { opacity: 0, scale: 0.8 }, animate: { opacity: 1, scale: 1 }, transition: { duration: 0.8 } };
       default:
         return {};
     }
@@ -78,15 +62,6 @@ const PreviewSection = ({ settings }) => {
     }
   };
 
-  const getFormLayoutClass = () => {
-    switch (settings.formStyle) {
-      case 'inline': return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end';
-      case 'stacked': return 'flex flex-col space-y-4';
-      case 'grid': return 'grid grid-cols-1 md:grid-cols-2 gap-4';
-      default: return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end';
-    }
-  };
-
   const sectionStyle = {
     backgroundColor: settings.backgroundType === 'color' ? settings.backgroundColor : 'transparent',
     backgroundImage: settings.backgroundType === 'image' ? `url(${settings.backgroundImage})` : 'none',
@@ -126,7 +101,112 @@ const PreviewSection = ({ settings }) => {
     true  // phone field (always shown)
   ].filter(Boolean).length;
 
-  const shouldStack = visibleFields > 4 || settings.formStyle === 'stacked';
+  const getFormLayoutClass = () => {
+    switch (settings.formStyle) {
+      case 'inline':
+        return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4';
+      case 'stacked':
+        return 'flex flex-col space-y-4';
+      case 'grid':
+        return 'grid grid-cols-1 md:grid-cols-2 gap-4';
+      default:
+        return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4';
+    }
+  };
+
+  const renderFormFields = () => {
+    const fields = [];
+    
+    // First row - Reservation details
+    if (settings.showDatePicker) {
+      fields.push(
+        <div key="date" className="w-full">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+          <input 
+            type="date" 
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+          />
+        </div>
+      );
+    }
+
+    if (settings.showTimePicker) {
+      fields.push(
+        <div key="time" className="w-full">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
+          <input 
+            type="time" 
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+          />
+        </div>
+      );
+    }
+
+    if (settings.showGuestCount) {
+      fields.push(
+        <div key="guests" className="w-full">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Guests</label>
+          <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option>1</option>
+            <option>2</option>
+            <option>3</option>
+            <option>4</option>
+            <option>5+</option>
+          </select>
+        </div>
+      );
+    }
+
+    // Contact Information
+    fields.push(
+      <div key="name" className="w-full">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+        <input 
+          type="text" 
+          placeholder="Your name" 
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+        />
+      </div>
+    );
+
+    fields.push(
+      <div key="email" className="w-full">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+        <input 
+          type="email" 
+          placeholder="your@email.com" 
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+        />
+      </div>
+    );
+
+    fields.push(
+      <div key="phone" className="w-full">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+        <input 
+          type="tel" 
+          placeholder="(123) 456-7890" 
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+        />
+      </div>
+    );
+
+    // Special Requests for stacked layout
+    if (settings.showSpecialRequests && settings.formStyle === 'stacked') {
+      fields.push(
+        <div key="special" className="w-full">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Special Requests</label>
+          <textarea 
+            rows="3" 
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+            placeholder="Any special requests or dietary requirements..." 
+          />
+        </div>
+      );
+    }
+
+    return fields;
+  };
 
   return (
     <div className="space-y-6">
@@ -164,81 +244,100 @@ const PreviewSection = ({ settings }) => {
               </p>
 
               <div className="mb-8">
-                <div className={shouldStack ? 'flex flex-col space-y-4' : getFormLayoutClass()}>
-                  {/* Form Fields */}
-                  {settings.showDatePicker && (
-                    <div className="flex-1 min-w-0">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
-                      <input 
-                        type="date" 
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                      />
-                    </div>
-                  )}
-                  
-                  {settings.showTimePicker && (
-                    <div className="flex-1 min-w-0">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
-                      <input 
-                        type="time" 
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                      />
-                    </div>
-                  )}
-                  
-                  {settings.showGuestCount && (
-                    <div className="flex-1 min-w-0">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Guests</label>
-                      <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option>1</option>
-                        <option>2</option>
-                        <option>3</option>
-                        <option>4</option>
-                        <option>5+</option>
-                      </select>
-                    </div>
-                  )}
-
-                  {/* Contact Information */}
-                  <div className="flex-1 min-w-0">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
-                    <input 
-                      type="text" 
-                      placeholder="Your name"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                    />
+                {/* Form Layout Based on Style */}
+                {settings.formStyle === 'stacked' ? (
+                  <div className="flex flex-col space-y-4">
+                    {renderFormFields()}
                   </div>
-
-                  <div className="flex-1 min-w-0">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                    <input 
-                      type="email" 
-                      placeholder="your@email.com"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                    />
+                ) : settings.formStyle === 'grid' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {renderFormFields()}
                   </div>
-
-                  <div className="flex-1 min-w-0">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
-                    <input 
-                      type="tel" 
-                      placeholder="(123) 456-7890"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                    />
-                  </div>
-
-                  {/* Special Requests for stacked layout */}
-                  {settings.showSpecialRequests && shouldStack && (
-                    <div className="w-full">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Special Requests</label>
-                      <textarea 
-                        rows="3" 
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Any special requests or dietary requirements..."
-                      />
+                ) : (
+                  // Inline layout - organized in logical rows
+                  <div className="space-y-4">
+                    {/* First Row - Reservation Details */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {settings.showDatePicker && (
+                        <div className="w-full">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                          <input 
+                            type="date" 
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                          />
+                        </div>
+                      )}
+                      
+                      {settings.showTimePicker && (
+                        <div className="w-full">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
+                          <input 
+                            type="time" 
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                          />
+                        </div>
+                      )}
+                      
+                      {settings.showGuestCount && (
+                        <div className="w-full">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Guests</label>
+                          <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option>1</option>
+                            <option>2</option>
+                            <option>3</option>
+                            <option>4</option>
+                            <option>5+</option>
+                          </select>
+                        </div>
+                      )}
+                      
+                      {/* If only 1-2 fields in first row, add Name here */}
+                      {([settings.showDatePicker, settings.showTimePicker, settings.showGuestCount].filter(Boolean).length <= 2) && (
+                        <div className="w-full">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                          <input 
+                            type="text" 
+                            placeholder="Your name" 
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                          />
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+
+                    {/* Second Row - Contact Information */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {/* Only show Name here if not already shown above */}
+                      {([settings.showDatePicker, settings.showTimePicker, settings.showGuestCount].filter(Boolean).length > 2) && (
+                        <div className="w-full">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                          <input 
+                            type="text" 
+                            placeholder="Your name" 
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                          />
+                        </div>
+                      )}
+                      
+                      <div className="w-full">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                        <input 
+                          type="email" 
+                          placeholder="your@email.com" 
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        />
+                      </div>
+                      
+                      <div className="w-full">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                        <input 
+                          type="tel" 
+                          placeholder="(123) 456-7890" 
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Submit Button */}
                 <div className="mt-6 flex justify-center">
@@ -258,9 +357,9 @@ const PreviewSection = ({ settings }) => {
       {/* Layout Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
         <div className="text-sm text-blue-800">
-          <strong>Layout:</strong> {shouldStack ? 'Stacked (responsive)' : 'Grid'} • 
+          <strong>Layout:</strong> {settings.formStyle} • 
           <strong> Fields:</strong> {visibleFields} visible • 
-          <strong> Style:</strong> {settings.formStyle}
+          <strong> Responsive:</strong> Organized in logical rows
         </div>
       </div>
     </div>

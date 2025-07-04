@@ -62,15 +62,6 @@ const HtmlExporter = ({ settings }) => {
       }
     };
 
-    const getFormLayout = () => {
-      switch (settings.formStyle) {
-        case 'inline': return 'display: flex; flex-wrap: wrap; gap: 16px; align-items: end;';
-        case 'stacked': return 'display: flex; flex-direction: column; gap: 16px;';
-        case 'grid': return 'display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;';
-        default: return 'display: flex; flex-wrap: wrap; gap: 16px; align-items: end;';
-      }
-    };
-
     const sectionStyle = `
       background-color: ${settings.backgroundType === 'color' ? settings.backgroundColor : 'transparent'};
       ${settings.backgroundType === 'image' ? `background-image: url(${settings.backgroundImage}); background-size: cover; background-position: center;` : ''}
@@ -101,53 +92,96 @@ const HtmlExporter = ({ settings }) => {
       ${getButtonStyle()}
     `;
 
-    const formFields = [];
-    
-    if (settings.showDatePicker) {
-      formFields.push(`
-        <div style="flex: 1; min-width: 200px;">
-          <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">Date</label>
-          <input type="date" name="reservation_date" required style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px;" />
-        </div>
-      `);
-    }
+    // Generate form fields with proper layout
+    const generateFormFields = () => {
+      const reservationFields = [];
+      const contactFields = [];
 
-    if (settings.showTimePicker) {
-      formFields.push(`
-        <div style="flex: 1; min-width: 150px;">
-          <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">Time</label>
-          <input type="time" name="reservation_time" required style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px;" />
-        </div>
-      `);
-    }
+      // Reservation fields
+      if (settings.showDatePicker) {
+        reservationFields.push(`
+          <div class="form-field">
+            <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">Date</label>
+            <input type="date" name="reservation_date" required style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px;" />
+          </div>
+        `);
+      }
 
-    if (settings.showGuestCount) {
-      formFields.push(`
-        <div style="flex: 1; min-width: 120px;">
-          <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">Guests</label>
-          <select name="guest_count" required style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px;">
-            <option value="">Select guests</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-            <option value="6">6</option>
-            <option value="7">7</option>
-            <option value="8">8+</option>
-          </select>
-        </div>
-      `);
-    }
+      if (settings.showTimePicker) {
+        reservationFields.push(`
+          <div class="form-field">
+            <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">Time</label>
+            <input type="time" name="reservation_time" required style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px;" />
+          </div>
+        `);
+      }
 
-    if (settings.showSpecialRequests && settings.formStyle === 'stacked') {
-      formFields.push(`
-        <div style="width: 100%;">
-          <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">Special Requests</label>
-          <textarea name="special_requests" rows="3" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px; resize: vertical;" placeholder="Any special requests or dietary requirements..."></textarea>
+      if (settings.showGuestCount) {
+        reservationFields.push(`
+          <div class="form-field">
+            <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">Guests</label>
+            <select name="guest_count" required style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px;">
+              <option value="">Select guests</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8">8+</option>
+            </select>
+          </div>
+        `);
+      }
+
+      // Contact fields
+      contactFields.push(`
+        <div class="form-field">
+          <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">Name</label>
+          <input type="text" name="customer_name" required style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px;" />
         </div>
       `);
-    }
+
+      contactFields.push(`
+        <div class="form-field">
+          <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">Email</label>
+          <input type="email" name="customer_email" required style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px;" />
+        </div>
+      `);
+
+      contactFields.push(`
+        <div class="form-field">
+          <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">Phone</label>
+          <input type="tel" name="customer_phone" required style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px;" />
+        </div>
+      `);
+
+      // Special requests for stacked layout
+      if (settings.showSpecialRequests && settings.formStyle === 'stacked') {
+        contactFields.push(`
+          <div class="form-field">
+            <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">Special Requests</label>
+            <textarea name="special_requests" rows="3" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px; resize: vertical;" placeholder="Any special requests or dietary requirements..."></textarea>
+          </div>
+        `);
+      }
+
+      // Layout based on form style
+      if (settings.formStyle === 'stacked') {
+        return `<div class="form-container-stacked">${[...reservationFields, ...contactFields].join('')}</div>`;
+      } else if (settings.formStyle === 'grid') {
+        return `<div class="form-container-grid">${[...reservationFields, ...contactFields].join('')}</div>`;
+      } else {
+        // Inline layout with proper rows
+        return `
+          <div class="form-container-inline">
+            ${reservationFields.length > 0 ? `<div class="form-row">${reservationFields.join('')}</div>` : ''}
+            <div class="form-row">${contactFields.join('')}</div>
+          </div>
+        `;
+      }
+    };
 
     // reCAPTCHA v3 Script and Configuration
     const recaptchaScript = settings.enableRecaptcha ? `
@@ -158,10 +192,7 @@ const HtmlExporter = ({ settings }) => {
       // reCAPTCHA v3 validation
       async function validateRecaptcha() {
         try {
-          const token = await grecaptcha.execute('${settings.recaptchaSiteKey || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'}', {
-            action: '${settings.recaptchaAction || 'reservation'}'
-          });
-          
+          const token = await grecaptcha.execute('${settings.recaptchaSiteKey || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'}', {action: '${settings.recaptchaAction || 'reservation'}'});
           // Send token to server for verification
           const response = await fetch('/verify-recaptcha', {
             method: 'POST',
@@ -174,7 +205,6 @@ const HtmlExporter = ({ settings }) => {
               threshold: ${settings.recaptchaThreshold || 0.5}
             })
           });
-          
           const result = await response.json();
           return result.success && result.score >= ${settings.recaptchaThreshold || 0.5};
         } catch (error) {
@@ -209,14 +239,13 @@ const HtmlExporter = ({ settings }) => {
                     pass: 'YOUR_SMTP_PASSWORD'  // Replace with your SMTP password
                   },
                   from: {
-                    name: 'YOUR_FROM_NAME',     // Replace with your from name
-                    address: 'YOUR_FROM_EMAIL'  // Replace with your from email
+                    name: 'YOUR_FROM_NAME',    // Replace with your from name
+                    address: 'YOUR_FROM_EMAIL' // Replace with your from email
                   }
                 }
               }
             })
           });
-          
           const result = await response.json();
           return result.success;
         } catch (error) {
@@ -241,30 +270,10 @@ ${recaptchaScript}
     
     <form method="POST" action="#" onsubmit="return handleFormSubmit(event)">
       <div style="margin-bottom: 32px;">
-        <div style="${getFormLayout()}">
-          ${formFields.join('')}
-          
-          <!-- Contact Information -->
-          <div style="flex: 1; min-width: 200px;">
-            <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">Name</label>
-            <input type="text" name="customer_name" required style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px;" />
-          </div>
-          
-          <div style="flex: 1; min-width: 200px;">
-            <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">Email</label>
-            <input type="email" name="customer_email" required style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px;" />
-          </div>
-          
-          <div style="flex: 1; min-width: 200px;">
-            <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">Phone</label>
-            <input type="tel" name="customer_phone" required style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px;" />
-          </div>
-        </div>
+        ${generateFormFields()}
       </div>
       
-      <button type="submit" style="${buttonStyle}" 
-              onmouseover="this.style.transform='scale(1.05)'" 
-              onmouseout="this.style.transform='scale(1)'">
+      <button type="submit" style="${buttonStyle}" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
         ${settings.buttonText}
       </button>
     </form>
@@ -272,64 +281,90 @@ ${recaptchaScript}
 </div>
 
 <style>
-  /* Responsive styles */
-  @media (max-width: 768px) {
-    .table-reservation-section {
-      padding: 24px !important;
-    }
-    .table-reservation-section h2 {
-      font-size: 24px !important;
-    }
-    .table-reservation-section p {
-      font-size: 16px !important;
-    }
-    .table-reservation-form {
-      flex-direction: column !important;
-    }
-    .table-reservation-form > div {
-      min-width: 100% !important;
-    }
+/* Form Layout Styles */
+.form-container-stacked {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-container-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.form-container-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.form-field {
+  width: 100%;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
   }
+  
+  .form-container-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Button hover effects */
+button[type="submit"]:hover {
+  transform: scale(1.05);
+  opacity: 0.9;
+}
 </style>
 
 <script>
-  ${recaptchaValidation}
-  ${emailHandling}
+${recaptchaValidation}
+${emailHandling}
+
+// Form submission handler
+async function handleFormSubmit(event) {
+  event.preventDefault();
   
-  // Form submission handler
-  async function handleFormSubmit(event) {
-    event.preventDefault();
-    
-    ${settings.enableRecaptcha ? `
-    // Validate reCAPTCHA v3
-    const isValidRecaptcha = await validateRecaptcha();
-    if (!isValidRecaptcha) {
-      alert('Security verification failed. Please try again.');
-      return false;
-    }
-    ` : ''}
-    
-    // Get form data
-    const formData = new FormData(event.target);
-    const data = Object.fromEntries(formData);
-    
-    ${settings.enableEmailNotifications ? `
-    // Send email notification
-    const emailSent = await sendEmailNotification(data);
-    if (!emailSent) {
-      alert('Failed to send reservation request. Please try again or contact us directly.');
-      return false;
-    }
-    ` : ''}
-    
-    // Show success message
-    alert('Reservation submitted successfully! We will contact you soon.');
-    
-    // Reset form
-    event.target.reset();
-    
+  ${settings.enableRecaptcha ? `
+  // Validate reCAPTCHA v3
+  const isValidRecaptcha = await validateRecaptcha();
+  if (!isValidRecaptcha) {
+    alert('Security verification failed. Please try again.');
     return false;
   }
+  ` : ''}
+  
+  // Get form data
+  const formData = new FormData(event.target);
+  const data = Object.fromEntries(formData);
+  
+  ${settings.enableEmailNotifications ? `
+  // Send email notification
+  const emailSent = await sendEmailNotification(data);
+  if (!emailSent) {
+    alert('Failed to send reservation request. Please try again or contact us directly.');
+    return false;
+  }
+  ` : ''}
+  
+  // Show success message
+  alert('Reservation submitted successfully! We will contact you soon.');
+  
+  // Reset form
+  event.target.reset();
+  return false;
+}
 </script>
     `.trim();
   };
@@ -431,62 +466,6 @@ ${recaptchaScript}
             <li>Replace 'YOUR_SECRET_KEY_HERE' with your actual reCAPTCHA secret key</li>
             <li>Implement server-side verification for production use</li>
           </ul>
-        </div>
-      )}
-
-      {settings.enableEmailNotifications && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <h4 className="font-semibold text-yellow-800 mb-2">Server-side Email Handler (PHP Example):</h4>
-          <div className="bg-gray-800 rounded p-3 overflow-x-auto">
-            <code className="text-green-400 text-xs whitespace-pre">
-              {`<?php
-// send-reservation-email.php
-require 'vendor/autoload.php'; // PHPMailer
-
-use PHPMailer\\PHPMailer\\PHPMailer;
-use PHPMailer\\PHPMailer\\SMTP;
-
-header('Content-Type: application/json');
-
-$input = json_decode(file_get_contents('php://input'), true);
-$formData = $input['formData'];
-$emailSettings = $input['emailSettings'];
-
-$mail = new PHPMailer(true);
-
-try {
-    // SMTP configuration
-    $mail->isSMTP();
-    $mail->Host = '${settings.smtpHost ? maskSensitiveData(settings.smtpHost, 6) : 'YOUR_SMTP_HOST'}';
-    $mail->SMTPAuth = true;
-    $mail->Username = '${settings.smtpUsername ? maskSensitiveData(settings.smtpUsername, 6) : 'YOUR_SMTP_USERNAME'}';
-    $mail->Password = '${settings.smtpPassword ? '••••••••' : 'YOUR_SMTP_PASSWORD'}';
-    $mail->SMTPSecure = ${settings.smtpSecure ? 'PHPMailer::ENCRYPTION_STARTTLS' : 'false'};
-    $mail->Port = ${settings.smtpPort || 587};
-
-    // Recipients
-    $mail->setFrom('${settings.smtpFromEmail ? maskSensitiveData(settings.smtpFromEmail, 6) : 'YOUR_FROM_EMAIL'}', '${settings.smtpFromName || 'YOUR_FROM_NAME'}');
-    foreach ($emailSettings['notificationEmails'] as $email) {
-        $mail->addAddress($email);
-    }
-
-    // Content
-    $mail->isHTML(true);
-    $mail->Subject = $emailSettings['emailSubject'];
-    $body = $emailSettings['emailTemplate'];
-    foreach ($formData as $key => $value) {
-        $body = str_replace('{{' . $key . '}}', $value, $body);
-    }
-    $mail->Body = nl2br($body);
-
-    $mail->send();
-    echo json_encode(['success' => true]);
-} catch (Exception $e) {
-    echo json_encode(['success' => false, 'error' => $mail->ErrorInfo]);
-}
-?>`}
-            </code>
-          </div>
         </div>
       )}
     </div>
