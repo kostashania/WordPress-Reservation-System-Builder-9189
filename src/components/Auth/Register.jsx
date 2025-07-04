@@ -1,90 +1,82 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiArrowLeft } from 'react-icons/fi';
-import { DB } from '../../schema/database';
+import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import * as FiIcons from 'react-icons/fi'
+import SafeIcon from '../../common/SafeIcon'
+import { useSupabaseAuth } from '../../hooks/useSupabaseAuth'
 
-const Register = ({ onLogin }) => {
-  const navigate = useNavigate();
+const { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiArrowLeft } = FiIcons
+
+const Register = () => {
+  const navigate = useNavigate()
+  const { signUp, loading } = useSupabaseAuth()
+  
   const [formData, setFormData] = useState({
     username: '',
     email: '',
     password: '',
     confirmPassword: ''
-  });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  })
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+    e.preventDefault()
+    setError('')
+
+    // Validation
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
+
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters')
+      return
+    }
+
+    setIsLoading(true)
 
     try {
-      // Validation
-      if (formData.password !== formData.confirmPassword) {
-        setError('Passwords do not match');
-        return;
-      }
-
-      if (formData.password.length < 6) {
-        setError('Password must be at least 6 characters');
-        return;
-      }
-
-      // Check if user exists
-      if (DB.userExists(formData.username, formData.email)) {
-        setError('Username or email already exists');
-        return;
-      }
-
-      // Create user
-      const newUser = DB.addUser({
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
-        role: 'user'
-      });
-
-      DB.setCurrentUser(newUser);
-      onLogin(newUser);
-      navigate('/dashboard');
+      await signUp(formData)
+      navigate('/dashboard')
     } catch (err) {
-      setError('Registration failed. Please try again.');
+      setError(err.message)
     } finally {
-      setLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
-    });
-  };
+    })
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
         className="max-w-md w-full space-y-8"
       >
-        <div className="text-center">
+        <div>
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{ delay: 0.2 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
             className="mx-auto h-16 w-16 bg-gradient-to-r from-green-500 to-blue-600 rounded-full flex items-center justify-center"
           >
-            <FiUser className="h-8 w-8 text-white" />
+            <SafeIcon icon={FiUser} className="h-8 w-8 text-white" />
           </motion.div>
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">
-            Create Account
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Create Your Account
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-center text-sm text-gray-600">
             Join us to create beautiful reservation sections
           </p>
         </div>
@@ -105,14 +97,16 @@ const Register = ({ onLogin }) => {
           <div className="space-y-4">
             <div>
               <div className="relative">
-                <FiUser className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <SafeIcon icon={FiUser} className="h-5 w-5 text-gray-400" />
+                </div>
                 <input
                   name="username"
                   type="text"
                   required
                   value={formData.username}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="appearance-none rounded-lg relative block w-full px-3 py-3 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   placeholder="Username"
                 />
               </div>
@@ -120,14 +114,16 @@ const Register = ({ onLogin }) => {
 
             <div>
               <div className="relative">
-                <FiMail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <SafeIcon icon={FiMail} className="h-5 w-5 text-gray-400" />
+                </div>
                 <input
                   name="email"
                   type="email"
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="appearance-none rounded-lg relative block w-full px-3 py-3 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   placeholder="Email address"
                 />
               </div>
@@ -135,44 +131,54 @@ const Register = ({ onLogin }) => {
 
             <div>
               <div className="relative">
-                <FiLock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <SafeIcon icon={FiLock} className="h-5 w-5 text-gray-400" />
+                </div>
                 <input
                   name="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="appearance-none rounded-lg relative block w-full px-3 py-3 pl-10 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   placeholder="Password"
                 />
                 <button
                   type="button"
-                  className="absolute right-3 top-3 h-5 w-5 text-gray-400 hover:text-gray-600"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? <FiEyeOff /> : <FiEye />}
+                  <SafeIcon 
+                    icon={showPassword ? FiEyeOff : FiEye} 
+                    className="h-5 w-5 text-gray-400 hover:text-gray-600 transition-colors" 
+                  />
                 </button>
               </div>
             </div>
 
             <div>
               <div className="relative">
-                <FiLock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <SafeIcon icon={FiLock} className="h-5 w-5 text-gray-400" />
+                </div>
                 <input
                   name="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
+                  type={showConfirmPassword ? "text" : "password"}
                   required
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="appearance-none rounded-lg relative block w-full px-3 py-3 pl-10 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   placeholder="Confirm Password"
                 />
                 <button
                   type="button"
-                  className="absolute right-3 top-3 h-5 w-5 text-gray-400 hover:text-gray-600"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+                  <SafeIcon 
+                    icon={showConfirmPassword ? FiEyeOff : FiEye} 
+                    className="h-5 w-5 text-gray-400 hover:text-gray-600 transition-colors" 
+                  />
                 </button>
               </div>
             </div>
@@ -182,26 +188,30 @@ const Register = ({ onLogin }) => {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             type="submit"
-            disabled={loading}
-            className="w-full py-3 px-4 bg-gradient-to-r from-green-500 to-blue-600 text-white font-medium rounded-lg hover:from-green-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isLoading || loading}
+            className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
           >
-            {loading ? 'Creating Account...' : 'Create Account'}
+            {isLoading || loading ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+            ) : (
+              'Create Account'
+            )}
           </motion.button>
 
           <div className="text-center">
             <button
               type="button"
               onClick={() => navigate('/login')}
-              className="flex items-center justify-center w-full py-3 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex items-center justify-center w-full py-3 px-4 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
             >
-              <FiArrowLeft className="h-4 w-4 mr-2" />
-              Back to Login
+              <SafeIcon icon={FiArrowLeft} className="h-4 w-4 mr-2" />
+              <span>Back to Login</span>
             </button>
           </div>
         </motion.form>
       </motion.div>
     </div>
-  );
-};
+  )
+}
 
-export default Register;
+export default Register

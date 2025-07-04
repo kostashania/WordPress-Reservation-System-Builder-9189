@@ -1,47 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect } from 'react'
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 
 // Components
-import Login from './components/Auth/Login';
-import Register from './components/Auth/Register';
-import Dashboard from './components/Dashboard/Dashboard';
-import Builder from './components/Builder/Builder';
-import AdminDashboard from './components/Admin/AdminDashboard';
-import UserManagement from './components/Admin/UserManagement';
+import Login from './components/Auth/Login'
+import Register from './components/Auth/Register'
+import Dashboard from './components/Dashboard/Dashboard'
+import Builder from './components/Builder/Builder'
 
-// Schema
-import { DB, initializeDB } from './schema/database';
+// Hooks
+import { useSupabaseAuth } from './hooks/useSupabaseAuth'
 
 // Styles
-import './App.css';
+import './App.css'
 
 function App() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Initialize database
-    initializeDB();
-    
-    // Check for existing user session
-    const currentUser = DB.getCurrentUser();
-    if (currentUser) {
-      setUser(currentUser);
-    }
-    
-    setLoading(false);
-  }, []);
-
-  const handleLogin = (userData) => {
-    setUser(userData);
-    DB.setCurrentUser(userData);
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    DB.clearCurrentUser();
-  };
+  const { user, loading } = useSupabaseAuth()
 
   if (loading) {
     return (
@@ -51,10 +25,8 @@ function App() {
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
-    );
+    )
   }
-
-  const isAdmin = user?.role === 'admin';
 
   return (
     <Router>
@@ -64,83 +36,33 @@ function App() {
             {/* Auth Routes */}
             <Route 
               path="/login" 
-              element={
-                !user ? (
-                  <Login onLogin={handleLogin} />
-                ) : (
-                  <Navigate to={isAdmin ? "/admin" : "/dashboard"} replace />
-                )
-              } 
+              element={!user ? <Login /> : <Navigate to="/dashboard" replace />} 
             />
             <Route 
               path="/register" 
-              element={
-                !user ? (
-                  <Register onLogin={handleLogin} />
-                ) : (
-                  <Navigate to={isAdmin ? "/admin" : "/dashboard"} replace />
-                )
-              } 
+              element={!user ? <Register /> : <Navigate to="/dashboard" replace />} 
             />
 
-            {/* User Routes */}
+            {/* Protected Routes */}
             <Route 
               path="/dashboard" 
-              element={
-                user && !isAdmin ? (
-                  <Dashboard user={user} onLogout={handleLogout} />
-                ) : (
-                  <Navigate to="/login" replace />
-                )
-              } 
+              element={user ? <Dashboard /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/builder/:id?" 
-              element={
-                user && !isAdmin ? (
-                  <Builder user={user} onLogout={handleLogout} />
-                ) : (
-                  <Navigate to="/login" replace />
-                )
-              } 
-            />
-
-            {/* Admin Routes */}
-            <Route 
-              path="/admin" 
-              element={
-                user && isAdmin ? (
-                  <AdminDashboard user={user} onLogout={handleLogout} />
-                ) : (
-                  <Navigate to="/login" replace />
-                )
-              } 
-            />
-            <Route 
-              path="/admin/users" 
-              element={
-                user && isAdmin ? (
-                  <UserManagement user={user} onLogout={handleLogout} />
-                ) : (
-                  <Navigate to="/login" replace />
-                )
-              } 
+              element={user ? <Builder /> : <Navigate to="/login" replace />} 
             />
 
             {/* Default Route */}
             <Route 
               path="/" 
-              element={
-                <Navigate to={
-                  user ? (isAdmin ? "/admin" : "/dashboard") : "/login"
-                } replace />
-              } 
+              element={<Navigate to={user ? "/dashboard" : "/login"} replace />} 
             />
           </Routes>
         </AnimatePresence>
       </div>
     </Router>
-  );
+  )
 }
 
-export default App;
+export default App

@@ -1,79 +1,163 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { FiArrowLeft, FiSave, FiEye, FiSettings, FiCode } from 'react-icons/fi';
-import { DB } from '../../schema/database';
-import SettingsPanel from './SettingsPanel';
-import PreviewPanel from './PreviewPanel';
-import ExportPanel from './ExportPanel';
+import React, { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import * as FiIcons from 'react-icons/fi'
+import SafeIcon from '../../common/SafeIcon'
+import { useSupabaseAuth } from '../../hooks/useSupabaseAuth'
+import { useSupabaseSections } from '../../hooks/useSupabaseSections'
+import SettingsPanel from './SettingsPanel'
+import PreviewPanel from './PreviewPanel'
+import ExportPanel from './ExportPanel'
 
-const Builder = ({ user }) => {
-  const navigate = useNavigate();
-  const { id } = useParams();
-  const [activeTab, setActiveTab] = useState('settings');
-  const [sectionName, setSectionName] = useState('');
-  const [settings, setSettings] = useState(null);
-  const [showSaveModal, setShowSaveModal] = useState(false);
-  const [loading, setLoading] = useState(false);
+const { FiArrowLeft, FiSave, FiEye, FiSettings, FiCode, FiCloud } = FiIcons
+
+const Builder = () => {
+  const navigate = useNavigate()
+  const { id } = useParams()
+  const { user } = useSupabaseAuth()
+  const { sections, createSection, updateSection } = useSupabaseSections(user?.id)
+  
+  const [activeTab, setActiveTab] = useState('settings')
+  const [sectionName, setSectionName] = useState('')
+  const [settings, setSettings] = useState(null)
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
     if (id) {
-      loadSection();
+      loadSection()
     } else {
-      setSettings(DB.getDefaultSettings());
+      setSettings(getDefaultSettings())
     }
-  }, [id]);
+  }, [id, sections])
+
+  const getDefaultSettings = () => ({
+    // Text Settings
+    title: 'Reserve Your Table',
+    subtitle: 'Book your perfect dining experience',
+    buttonText: 'Make Reservation',
+    
+    // Background Settings
+    backgroundType: 'color',
+    backgroundColor: '#ffffff',
+    backgroundImage: '',
+    backgroundOverlay: true,
+    overlayColor: '#000000',
+    overlayOpacity: 0.5,
+    
+    // Button Settings
+    buttonStyle: 'modern',
+    buttonColor: '#3b82f6',
+    buttonTextColor: '#ffffff',
+    buttonHoverColor: '#2563eb',
+    buttonRadius: 8,
+    buttonSize: 'medium',
+    
+    // Text Colors
+    titleColor: '#1f2937',
+    subtitleColor: '#6b7280',
+    
+    // Layout Settings
+    alignment: 'center',
+    padding: 'large',
+    maxWidth: '800px',
+    
+    // Effects
+    animation: 'fadeIn',
+    shadow: 'medium',
+    borderRadius: 12,
+    
+    // Form Settings
+    showDatePicker: true,
+    showTimePicker: true,
+    showGuestCount: true,
+    showSpecialRequests: true,
+    formStyle: 'inline',
+    
+    // reCAPTCHA v3 Settings
+    enableRecaptcha: false,
+    recaptchaSiteKey: '',
+    recaptchaSecretKey: '',
+    recaptchaThreshold: 0.5,
+    recaptchaAction: 'reservation',
+    
+    // Email Settings
+    enableEmailNotifications: false,
+    emailProvider: 'simple',
+    notificationEmails: [],
+    emailSubject: 'New Table Reservation Request',
+    emailTemplate: '',
+    
+    // SMTP Settings
+    smtpHost: '',
+    smtpPort: 587,
+    smtpUsername: '',
+    smtpPassword: '',
+    smtpFromName: '',
+    smtpFromEmail: '',
+    smtpSecure: false,
+    
+    // Simple Email Settings
+    simpleEmailService: 'emailjs',
+    emailjsServiceId: '',
+    emailjsTemplateId: '',
+    emailjsPublicKey: '',
+    webhookUrl: ''
+  })
 
   const loadSection = () => {
-    const section = DB.getSection(id);
-    if (section) {
-      setSectionName(section.name);
-      setSettings(section.settings);
-    } else {
-      navigate('/dashboard');
+    if (sections.length > 0) {
+      const section = sections.find(s => s.id === id)
+      if (section) {
+        setSectionName(section.name)
+        setSettings(section.settings || getDefaultSettings())
+      } else {
+        navigate('/dashboard')
+      }
     }
-  };
+  }
 
   const handleSave = async () => {
     if (!sectionName.trim()) {
-      alert('Please enter a section name');
-      return;
+      alert('Please enter a section name')
+      return
     }
 
-    setLoading(true);
+    setIsSaving(true)
     try {
       if (id) {
         // Update existing section
-        DB.updateSection(id, {
+        await updateSection(id, {
           name: sectionName,
           settings: settings
-        });
+        })
       } else {
         // Create new section
-        DB.addSection({
+        await createSection({
           name: sectionName,
           settings: settings
-        }, user.id);
+        })
       }
       
-      setShowSaveModal(false);
-      navigate('/dashboard');
+      setShowSaveModal(false)
+      navigate('/dashboard')
     } catch (error) {
-      alert('Error saving section');
+      alert('Error saving section: ' + error.message)
     } finally {
-      setLoading(false);
+      setIsSaving(false)
     }
-  };
+  }
 
   const updateSettings = (newSettings) => {
-    setSettings(newSettings);
-  };
+    setSettings(newSettings)
+  }
 
   const tabs = [
     { id: 'settings', label: 'Settings', icon: FiSettings },
     { id: 'preview', label: 'Preview', icon: FiEye },
     { id: 'export', label: 'Export', icon: FiCode }
-  ];
+  ]
 
   if (!settings) {
     return (
@@ -83,7 +167,7 @@ const Builder = ({ user }) => {
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -97,21 +181,27 @@ const Builder = ({ user }) => {
                 onClick={() => navigate('/dashboard')}
                 className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 transition-colors"
               >
-                <FiArrowLeft className="h-4 w-4" />
+                <SafeIcon icon={FiArrowLeft} className="h-4 w-4" />
                 <span>Back to Dashboard</span>
               </button>
               <div className="h-6 w-px bg-gray-300"></div>
-              <h1 className="text-xl font-semibold text-gray-900">
-                {id ? 'Edit Section' : 'Create New Section'}
-              </h1>
+              <div>
+                <h1 className="text-xl font-semibold text-gray-900">
+                  {id ? 'Edit Section' : 'Create New Section'}
+                </h1>
+                <div className="flex items-center space-x-2 mt-1">
+                  <SafeIcon icon={FiCloud} className="h-3 w-3 text-blue-500" />
+                  <span className="text-xs text-blue-600">Auto-saved to cloud</span>
+                </div>
+              </div>
             </div>
             <button
               onClick={() => setShowSaveModal(true)}
-              disabled={loading}
+              disabled={isSaving}
               className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
             >
-              <FiSave className="h-4 w-4" />
-              <span>Save</span>
+              <SafeIcon icon={FiSave} className="h-4 w-4" />
+              <span>{isSaving ? 'Saving...' : 'Save'}</span>
             </button>
           </div>
         </div>
@@ -128,10 +218,10 @@ const Builder = ({ user }) => {
                 className={`flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
                   activeTab === tab.id
                     ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <tab.icon className="h-4 w-4" />
+                <SafeIcon icon={tab.icon} className="h-4 w-4" />
                 <span>{tab.label}</span>
               </button>
             ))}
@@ -142,16 +232,11 @@ const Builder = ({ user }) => {
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'settings' && (
-          <SettingsPanel
-            settings={settings}
-            onSettingsChange={updateSettings}
-          />
+          <SettingsPanel settings={settings} onSettingsChange={updateSettings} />
         )}
-        
         {activeTab === 'preview' && (
           <PreviewPanel settings={settings} />
         )}
-        
         {activeTab === 'export' && (
           <ExportPanel settings={settings} />
         )}
@@ -183,17 +268,17 @@ const Builder = ({ user }) => {
               </button>
               <button
                 onClick={handleSave}
-                disabled={loading || !sectionName.trim()}
+                disabled={isSaving || !sectionName.trim()}
                 className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
               >
-                {loading ? 'Saving...' : 'Save'}
+                {isSaving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </motion.div>
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default Builder;
+export default Builder

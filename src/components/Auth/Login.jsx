@@ -1,69 +1,68 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { FiUser, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
-import { DB } from '../../schema/database';
+import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import * as FiIcons from 'react-icons/fi'
+import SafeIcon from '../../common/SafeIcon'
+import { useSupabaseAuth } from '../../hooks/useSupabaseAuth'
 
-const Login = ({ onLogin }) => {
-  const navigate = useNavigate();
+const { FiUser, FiLock, FiEye, FiEyeOff } = FiIcons
+
+const Login = () => {
+  const navigate = useNavigate()
+  const { signIn, loading } = useSupabaseAuth()
+  
   const [formData, setFormData] = useState({
     username: '',
     password: ''
-  });
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  })
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+    e.preventDefault()
+    setError('')
+    setIsLoading(true)
 
     try {
-      const user = DB.findUser(formData.username, formData.password);
-      
-      if (user) {
-        DB.setCurrentUser(user);
-        onLogin(user);
-        navigate(user.role === 'admin' ? '/admin' : '/dashboard');
-      } else {
-        setError('Invalid username or password');
-      }
+      await signIn(formData)
+      navigate('/dashboard')
     } catch (err) {
-      setError('Login failed. Please try again.');
+      setError(err.message)
     } finally {
-      setLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
-    });
-  };
+    })
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
         className="max-w-md w-full space-y-8"
       >
-        <div className="text-center">
+        <div>
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{ delay: 0.2 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
             className="mx-auto h-16 w-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center"
           >
-            <FiUser className="h-8 w-8 text-white" />
+            <SafeIcon icon={FiUser} className="h-8 w-8 text-white" />
           </motion.div>
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
             Table Reservation Builder
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Sign in to manage your reservation sections
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Sign in to create beautiful reservation sections
           </p>
         </div>
 
@@ -82,40 +81,49 @@ const Login = ({ onLogin }) => {
 
           <div className="space-y-4">
             <div>
-              <label className="sr-only">Username</label>
+              <label htmlFor="username" className="sr-only">Username</label>
               <div className="relative">
-                <FiUser className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <SafeIcon icon={FiUser} className="h-5 w-5 text-gray-400" />
+                </div>
                 <input
+                  id="username"
                   name="username"
                   type="text"
                   required
                   value={formData.username}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="appearance-none rounded-lg relative block w-full px-3 py-3 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   placeholder="Username"
                 />
               </div>
             </div>
 
             <div>
-              <label className="sr-only">Password</label>
+              <label htmlFor="password" className="sr-only">Password</label>
               <div className="relative">
-                <FiLock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <SafeIcon icon={FiLock} className="h-5 w-5 text-gray-400" />
+                </div>
                 <input
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
+                  id="password"
+                  name="password" 
+                  type={showPassword ? "text" : "password"}
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="appearance-none rounded-lg relative block w-full px-3 py-3 pl-10 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   placeholder="Password"
                 />
                 <button
                   type="button"
-                  className="absolute right-3 top-3 h-5 w-5 text-gray-400 hover:text-gray-600"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? <FiEyeOff /> : <FiEye />}
+                  <SafeIcon 
+                    icon={showPassword ? FiEyeOff : FiEye} 
+                    className="h-5 w-5 text-gray-400 hover:text-gray-600 transition-colors" 
+                  />
                 </button>
               </div>
             </div>
@@ -125,10 +133,14 @@ const Login = ({ onLogin }) => {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             type="submit"
-            disabled={loading}
-            className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-medium rounded-lg hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isLoading || loading}
+            className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {isLoading || loading ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+            ) : (
+              'Sign In'
+            )}
           </motion.button>
 
           <div className="text-center">
@@ -142,15 +154,16 @@ const Login = ({ onLogin }) => {
           </div>
         </motion.form>
 
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <h4 className="font-medium text-yellow-800 mb-2">Demo Credentials:</h4>
-          <p className="text-sm text-yellow-700">
-            <strong>Admin:</strong> admin / admin123
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 className="font-semibold text-blue-800 mb-2">Cloud-Powered Platform</h4>
+          <p className="text-blue-700 text-sm">
+            Your data is securely stored in the cloud with Supabase. 
+            Create an account to access your reservation forms from anywhere.
           </p>
         </div>
       </motion.div>
     </div>
-  );
-};
+  )
+}
 
-export default Login;
+export default Login
