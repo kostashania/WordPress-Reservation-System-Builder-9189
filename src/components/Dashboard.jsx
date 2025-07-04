@@ -21,18 +21,13 @@ const Dashboard = ({ user, onLogout }) => {
 
   const checkDatabaseConnection = async () => {
     try {
-      if (supabase.from && typeof supabase.from === 'function') {
-        const { data, error } = await supabase.from('reservation_sections_db').select('count', { count: 'exact' });
-        if (!error) {
-          setDbStatus('connected');
-          console.log('Database connected');
-        } else {
-          setDbStatus('localStorage');
-          console.log('Database error, using localStorage:', error);
-        }
+      const { data, error } = await supabase.from('reservation_sections_db9x8k7m2q').select('count', { count: 'exact' });
+      if (!error) {
+        setDbStatus('connected');
+        console.log('Database connected');
       } else {
         setDbStatus('localStorage');
-        console.log('No database connection, using localStorage');
+        console.log('Database error, using localStorage:', error);
       }
     } catch (error) {
       setDbStatus('localStorage');
@@ -43,48 +38,35 @@ const Dashboard = ({ user, onLogout }) => {
   const loadSections = async () => {
     setIsLoading(true);
     try {
-      console.log('Loading sections for user:', user);
-      
       // Try Supabase first
-      if (supabase.from && typeof supabase.from === 'function') {
-        try {
-          const { data, error } = await supabase
-            .from('reservation_sections_db')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false });
-            
-          if (data && !error) {
-            console.log('Loaded from Supabase:', data);
-            setSections(data);
-            setIsLoading(false);
-            return;
-          }
-          console.log('Supabase query error:', error);
-        } catch (supabaseError) {
-          console.log('Supabase error:', supabaseError);
-        }
+      const { data, error } = await supabase
+        .from('reservation_sections_db9x8k7m2q')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+        
+      if (data && !error) {
+        console.log('Loaded from Supabase:', data);
+        setSections(data);
+        setIsLoading(false);
+        return;
       }
       
-      // Fallback to localStorage
-      console.log('Loading from localStorage');
-      const savedSections = localStorage.getItem('reservationSections');
-      if (savedSections) {
-        const allSections = JSON.parse(savedSections);
-        console.log('All sections from localStorage:', allSections);
-        
-        // Filter sections for current user using both user_id and userId
-        const userSections = allSections.filter(section => 
-          section.userId === user.id || section.user_id === user.id
-        );
-        console.log('User sections:', userSections);
-        setSections(userSections);
-      } else {
-        console.log('No sections found in localStorage');
-        setSections([]);
-      }
-    } catch (error) {
-      console.error('Error loading sections:', error);
+      console.log('Supabase query error:', error);
+    } catch (supabaseError) {
+      console.log('Supabase error:', supabaseError);
+    }
+    
+    // Fallback to localStorage
+    console.log('Loading from localStorage');
+    const savedSections = localStorage.getItem('reservationSections');
+    if (savedSections) {
+      const allSections = JSON.parse(savedSections);
+      const userSections = allSections.filter(section => 
+        section.userId === user.id || section.user_id === user.id
+      );
+      setSections(userSections);
+    } else {
       setSections([]);
     }
     setIsLoading(false);
@@ -98,28 +80,26 @@ const Dashboard = ({ user, onLogout }) => {
     if (window.confirm('Are you sure you want to delete this section?')) {
       try {
         // Try Supabase first
-        if (supabase.from && typeof supabase.from === 'function') {
-          const { error } = await supabase
-            .from('reservation_sections_db')
-            .delete()
-            .eq('id', id);
-            
-          if (!error) {
-            setSections(sections.filter(section => section.id !== id));
-            return;
-          }
-        }
-        
-        // Fallback to localStorage
-        const savedSections = localStorage.getItem('reservationSections');
-        if (savedSections) {
-          const allSections = JSON.parse(savedSections);
-          const updatedSections = allSections.filter(section => section.id !== id);
-          localStorage.setItem('reservationSections', JSON.stringify(updatedSections));
+        const { error } = await supabase
+          .from('reservation_sections_db9x8k7m2q')
+          .delete()
+          .eq('id', id);
+          
+        if (!error) {
           setSections(sections.filter(section => section.id !== id));
+          return;
         }
       } catch (error) {
-        console.error('Error deleting section:', error);
+        console.error('Supabase delete error:', error);
+      }
+      
+      // Fallback to localStorage
+      const savedSections = localStorage.getItem('reservationSections');
+      if (savedSections) {
+        const allSections = JSON.parse(savedSections);
+        const updatedSections = allSections.filter(section => section.id !== id);
+        localStorage.setItem('reservationSections', JSON.stringify(updatedSections));
+        setSections(sections.filter(section => section.id !== id));
       }
     }
   };
@@ -127,34 +107,41 @@ const Dashboard = ({ user, onLogout }) => {
   const duplicateSection = async (section) => {
     try {
       const newSection = {
-        ...section,
-        id: Date.now(),
         name: `${section.name} (Copy)`,
-        created_at: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-        user_id: user.id,
-        userId: user.id
+        settings: section.settings,
+        user_id: user.id
       };
 
-      // Try Supabase first
-      if (supabase.from && typeof supabase.from === 'function') {
+      try {
+        // Try Supabase first
         const { data, error } = await supabase
-          .from('reservation_sections_db')
+          .from('reservation_sections_db9x8k7m2q')
           .insert([newSection])
-          .select();
+          .select()
+          .single();
           
         if (!error && data) {
-          setSections([data[0], ...sections]);
+          setSections([data, ...sections]);
           return;
         }
+      } catch (supabaseError) {
+        console.error('Supabase duplicate error:', supabaseError);
       }
       
       // Fallback to localStorage
+      const fallbackSection = {
+        ...newSection,
+        id: Date.now(),
+        userId: user.id,
+        created_at: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      };
+      
       const savedSections = localStorage.getItem('reservationSections');
       const allSections = savedSections ? JSON.parse(savedSections) : [];
-      allSections.push(newSection);
+      allSections.push(fallbackSection);
       localStorage.setItem('reservationSections', JSON.stringify(allSections));
-      setSections([newSection, ...sections]);
+      setSections([fallbackSection, ...sections]);
     } catch (error) {
       console.error('Error duplicating section:', error);
     }
@@ -178,41 +165,47 @@ const Dashboard = ({ user, onLogout }) => {
         try {
           const importedSection = JSON.parse(e.target.result);
           const newSection = {
-            ...importedSection,
-            id: Date.now(),
             name: `${importedSection.name} (Imported)`,
-            created_at: new Date().toISOString(),
-            createdAt: new Date().toISOString(),
-            user_id: user.id,
-            userId: user.id
+            settings: importedSection.settings,
+            user_id: user.id
           };
 
-          // Try Supabase first
-          if (supabase.from && typeof supabase.from === 'function') {
+          try {
+            // Try Supabase first
             const { data, error } = await supabase
-              .from('reservation_sections_db')
+              .from('reservation_sections_db9x8k7m2q')
               .insert([newSection])
-              .select();
+              .select()
+              .single();
               
             if (!error && data) {
-              setSections([data[0], ...sections]);
+              setSections([data, ...sections]);
               return;
             }
+          } catch (supabaseError) {
+            console.error('Supabase import error:', supabaseError);
           }
           
           // Fallback to localStorage
+          const fallbackSection = {
+            ...newSection,
+            id: Date.now(),
+            userId: user.id,
+            created_at: new Date().toISOString(),
+            createdAt: new Date().toISOString()
+          };
+          
           const savedSections = localStorage.getItem('reservationSections');
           const allSections = savedSections ? JSON.parse(savedSections) : [];
-          allSections.push(newSection);
+          allSections.push(fallbackSection);
           localStorage.setItem('reservationSections', JSON.stringify(allSections));
-          setSections([newSection, ...sections]);
+          setSections([fallbackSection, ...sections]);
         } catch (error) {
           alert('Error importing section. Please check the file format.');
         }
       };
       reader.readAsText(file);
     }
-    // Reset file input
     event.target.value = '';
   };
 
@@ -351,7 +344,7 @@ const Dashboard = ({ user, onLogout }) => {
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900 mb-1">{section.name}</h3>
                         <p className="text-sm text-gray-500">
-                          Created {new Date(section.created_at || section.createdAt).toLocaleDateString()}
+                          Created {new Date(section.created_at).toLocaleDateString()}
                         </p>
                       </div>
                       <div className="flex space-x-1">
@@ -419,17 +412,6 @@ const Dashboard = ({ user, onLogout }) => {
               ))
             )}
           </motion.div>
-        )}
-
-        {/* Debug Info (only in development) */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mt-8 p-4 bg-gray-100 rounded-lg">
-            <h4 className="font-semibold mb-2">Debug Info:</h4>
-            <p>User ID: {user.id}</p>
-            <p>Total sections: {sections.length}</p>
-            <p>Database status: {dbStatus}</p>
-            <p>Sections: {JSON.stringify(sections.map(s => ({ id: s.id, name: s.name, userId: s.userId || s.user_id })))}</p>
-          </div>
         )}
       </div>
     </div>
