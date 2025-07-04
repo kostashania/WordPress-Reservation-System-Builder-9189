@@ -1,0 +1,299 @@
+/* Table Reservation Plugin - Public Styles */
+
+.table-reservation-wrapper {
+    margin: 20px 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.table-reservation-container {
+    background-color: #f8f9fa;
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 800px;
+    margin: 0 auto;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+/* Color Schemes */
+.table-reservation-wrapper[data-color-scheme="blue"] .table-reservation-container {
+    background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+}
+
+.table-reservation-wrapper[data-color-scheme="green"] .table-reservation-container {
+    background: linear-gradient(135deg, #e8f5e8 0%, #f1f8e9 100%);
+}
+
+.table-reservation-wrapper[data-color-scheme="orange"] .table-reservation-container {
+    background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%);
+}
+
+/* Typography */
+.reservation-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #1a202c;
+}
+
+.reservation-subtitle {
+    font-size: 1.125rem;
+    color: #4a5568;
+    margin-bottom: 2rem;
+}
+
+/* Form Styles */
+.table-reservation-form {
+    text-align: left;
+}
+
+.form-section {
+    margin-bottom: 1.5rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-field label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #2d3748;
+    font-size: 0.875rem;
+}
+
+.required {
+    color: #e53e3e;
+}
+
+.form-control {
+    padding: 0.75rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+    background-color: #fff;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #3182ce;
+    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+}
+
+.form-control:invalid {
+    border-color: #e53e3e;
+}
+
+/* Button Styles */
+.form-actions {
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.reservation-submit-btn {
+    background: linear-gradient(135deg, #3182ce 0%, #2c5aa0 100%);
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    min-width: 200px;
+}
+
+.reservation-submit-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(49, 130, 206, 0.3);
+}
+
+.reservation-submit-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* Color scheme specific buttons */
+.table-reservation-wrapper[data-color-scheme="green"] .reservation-submit-btn {
+    background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+}
+
+.table-reservation-wrapper[data-color-scheme="green"] .reservation-submit-btn:hover:not(:disabled) {
+    box-shadow: 0 8px 25px rgba(56, 161, 105, 0.3);
+}
+
+.table-reservation-wrapper[data-color-scheme="orange"] .reservation-submit-btn {
+    background: linear-gradient(135deg, #ed8936 0%, #c05621 100%);
+}
+
+.table-reservation-wrapper[data-color-scheme="orange"] .reservation-submit-btn:hover:not(:disabled) {
+    box-shadow: 0 8px 25px rgba(237, 137, 54, 0.3);
+}
+
+/* Loading Spinner */
+.spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 0.5rem;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Messages */
+.form-messages {
+    margin-bottom: 1rem;
+}
+
+.success-message {
+    background-color: #c6f6d5;
+    border: 1px solid #9ae6b4;
+    color: #22543d;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.error-message {
+    background-color: #fed7d7;
+    border: 1px solid #feb2b2;
+    color: #742a2a;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+/* reCAPTCHA Info */
+.recaptcha-info {
+    text-align: center;
+    margin-top: 1rem;
+    color: #718096;
+    font-size: 0.75rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .table-reservation-container {
+        padding: 1.5rem;
+        margin: 10px;
+    }
+    
+    .reservation-title {
+        font-size: 1.5rem;
+    }
+    
+    .reservation-subtitle {
+        font-size: 1rem;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .reservation-submit-btn {
+        width: 100%;
+        padding: 0.875rem 1.5rem;
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .table-reservation-container {
+        padding: 1rem;
+    }
+    
+    .form-control {
+        padding: 0.625rem;
+        font-size: 0.875rem;
+    }
+}
+
+/* Form Style Variations */
+.table-reservation-wrapper[data-style="minimal"] .table-reservation-container {
+    background-color: transparent;
+    box-shadow: none;
+    border: 2px solid #e2e8f0;
+}
+
+.table-reservation-wrapper[data-style="minimal"] .form-control {
+    border: none;
+    border-bottom: 2px solid #e2e8f0;
+    border-radius: 0;
+    background-color: transparent;
+}
+
+.table-reservation-wrapper[data-style="minimal"] .form-control:focus {
+    border-color: #3182ce;
+    box-shadow: none;
+}
+
+.table-reservation-wrapper[data-style="minimal"] .reservation-submit-btn {
+    background: none;
+    color: #3182ce;
+    border: 2px solid #3182ce;
+}
+
+.table-reservation-wrapper[data-style="minimal"] .reservation-submit-btn:hover:not(:disabled) {
+    background-color: #3182ce;
+    color: white;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Accessibility */
+.form-control:focus-visible {
+    outline: 2px solid #3182ce;
+    outline-offset: 2px;
+}
+
+.reservation-submit-btn:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .form-control {
+        border-width: 3px;
+    }
+    
+    .reservation-submit-btn {
+        border: 3px solid transparent;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .form-control,
+    .reservation-submit-btn {
+        transition: none;
+    }
+    
+    .spinner {
+        animation: none;
+        border-top-color: #ffffff;
+    }
+    
+    .reservation-submit-btn:hover:not(:disabled) {
+        transform: none;
+    }
+}
