@@ -1,125 +1,143 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import Login from './components/Login';
-import Register from './components/Register';
-import Dashboard from './components/Dashboard';
-import Builder from './components/Builder';
-import AdminDashboard from './components/AdminDashboard';
-import UserManagement from './components/UserManagement';
-import SectionsList from './components/SectionsList';
+import { motion, AnimatePresence } from 'framer-motion';
+
+// Components
+import Login from './components/Auth/Login';
+import Register from './components/Auth/Register';
+import Dashboard from './components/Dashboard/Dashboard';
+import Builder from './components/Builder/Builder';
+import AdminDashboard from './components/Admin/AdminDashboard';
+import UserManagement from './components/Admin/UserManagement';
+
+// Schema
+import { DB, initializeDB } from './schema/database';
+
+// Styles
 import './App.css';
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
-  const [showRegister, setShowRegister] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-      setIsLoggedIn(true);
+    // Initialize database
+    initializeDB();
+    
+    // Check for existing user session
+    const currentUser = DB.getCurrentUser();
+    if (currentUser) {
+      setUser(currentUser);
     }
+    
+    setLoading(false);
   }, []);
 
   const handleLogin = (userData) => {
     setUser(userData);
-    setIsLoggedIn(true);
-    localStorage.setItem('user', JSON.stringify(userData));
+    DB.setCurrentUser(userData);
   };
 
   const handleLogout = () => {
     setUser(null);
-    setIsLoggedIn(false);
-    localStorage.removeItem('user');
+    DB.clearCurrentUser();
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const isAdmin = user?.role === 'admin';
 
   return (
     <Router>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-        <Routes>
-          <Route 
-            path="/login" 
-            element={
-              isLoggedIn ? (
-                <Navigate to={isAdmin ? "/admin" : "/dashboard"} />
-              ) : (
-                <Login 
-                  onLogin={handleLogin} 
-                  showRegister={showRegister}
-                  setShowRegister={setShowRegister}
-                />
-              )
-            } 
-          />
-          <Route 
-            path="/register" 
-            element={
-              isLoggedIn ? (
-                <Navigate to={isAdmin ? "/admin" : "/dashboard"} />
-              ) : (
-                <Register 
-                  onRegister={handleLogin}
-                  setShowRegister={setShowRegister}
-                />
-              )
-            } 
-          />
-          <Route 
-            path="/dashboard" 
-            element={
-              isLoggedIn && !isAdmin ? (
-                <Dashboard user={user} onLogout={handleLogout} />
-              ) : (
-                <Navigate to="/login" />
-              )
-            } 
-          />
-          <Route 
-            path="/builder/:id?" 
-            element={
-              isLoggedIn && !isAdmin ? (
-                <Builder user={user} onLogout={handleLogout} />
-              ) : (
-                <Navigate to="/login" />
-              )
-            } 
-          />
-          <Route 
-            path="/admin" 
-            element={
-              isLoggedIn && isAdmin ? (
-                <AdminDashboard user={user} onLogout={handleLogout} />
-              ) : (
-                <Navigate to="/login" />
-              )
-            } 
-          />
-          <Route 
-            path="/admin/users" 
-            element={
-              isLoggedIn && isAdmin ? (
-                <UserManagement user={user} onLogout={handleLogout} />
-              ) : (
-                <Navigate to="/login" />
-              )
-            } 
-          />
-          <Route 
-            path="/admin/sections" 
-            element={
-              isLoggedIn && isAdmin ? (
-                <SectionsList user={user} onLogout={handleLogout} />
-              ) : (
-                <Navigate to="/login" />
-              )
-            } 
-          />
-          <Route path="/" element={<Navigate to={isLoggedIn ? (isAdmin ? "/admin" : "/dashboard") : "/login"} />} />
-        </Routes>
+        <AnimatePresence mode="wait">
+          <Routes>
+            {/* Auth Routes */}
+            <Route 
+              path="/login" 
+              element={
+                !user ? (
+                  <Login onLogin={handleLogin} />
+                ) : (
+                  <Navigate to={isAdmin ? "/admin" : "/dashboard"} replace />
+                )
+              } 
+            />
+            <Route 
+              path="/register" 
+              element={
+                !user ? (
+                  <Register onLogin={handleLogin} />
+                ) : (
+                  <Navigate to={isAdmin ? "/admin" : "/dashboard"} replace />
+                )
+              } 
+            />
+
+            {/* User Routes */}
+            <Route 
+              path="/dashboard" 
+              element={
+                user && !isAdmin ? (
+                  <Dashboard user={user} onLogout={handleLogout} />
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              } 
+            />
+            <Route 
+              path="/builder/:id?" 
+              element={
+                user && !isAdmin ? (
+                  <Builder user={user} onLogout={handleLogout} />
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              } 
+            />
+
+            {/* Admin Routes */}
+            <Route 
+              path="/admin" 
+              element={
+                user && isAdmin ? (
+                  <AdminDashboard user={user} onLogout={handleLogout} />
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              } 
+            />
+            <Route 
+              path="/admin/users" 
+              element={
+                user && isAdmin ? (
+                  <UserManagement user={user} onLogout={handleLogout} />
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              } 
+            />
+
+            {/* Default Route */}
+            <Route 
+              path="/" 
+              element={
+                <Navigate to={
+                  user ? (isAdmin ? "/admin" : "/dashboard") : "/login"
+                } replace />
+              } 
+            />
+          </Routes>
+        </AnimatePresence>
       </div>
     </Router>
   );
