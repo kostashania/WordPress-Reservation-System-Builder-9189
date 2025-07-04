@@ -15,8 +15,6 @@ const Builder = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('customize');
   const [sectionName, setSectionName] = useState('');
   const [showSaveModal, setShowSaveModal] = useState(false);
-  const [showHtmlExporter, setShowHtmlExporter] = useState(false);
-  
   const [settings, setSettings] = useState({
     // Text Settings
     title: 'Reserve Your Table',
@@ -58,7 +56,14 @@ const Builder = ({ user, onLogout }) => {
     showTimePicker: true,
     showGuestCount: true,
     showSpecialRequests: true,
-    formStyle: 'inline'
+    formStyle: 'inline',
+    
+    // reCAPTCHA v3 Settings
+    enableRecaptcha: false,
+    recaptchaSiteKey: '',
+    recaptchaSecretKey: '',
+    recaptchaThreshold: 0.5,
+    recaptchaAction: 'reservation'
   });
 
   useEffect(() => {
@@ -92,6 +97,7 @@ const Builder = ({ user, onLogout }) => {
       id: id ? parseInt(id) : Date.now(),
       name: sectionName,
       settings: settings,
+      userId: user.id,
       createdAt: id ? sections.find(s => s.id === parseInt(id))?.createdAt : new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -135,7 +141,6 @@ const Builder = ({ user, onLogout }) => {
                 {id ? 'Edit Section' : 'Create New Section'}
               </h1>
             </div>
-            
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => setShowSaveModal(true)}
@@ -174,16 +179,14 @@ const Builder = ({ user, onLogout }) => {
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'customize' && (
-          <CustomizationPanel 
-            settings={settings} 
+          <CustomizationPanel
+            settings={settings}
             onSettingsChange={setSettings}
           />
         )}
-        
         {activeTab === 'preview' && (
           <PreviewSection settings={settings} />
         )}
-        
         {activeTab === 'export' && (
           <HtmlExporter settings={settings} />
         )}

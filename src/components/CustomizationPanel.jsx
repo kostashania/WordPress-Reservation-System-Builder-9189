@@ -2,17 +2,15 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
+import RecaptchaSettings from './RecaptchaSettings';
 
-const { FiType, FiImage, FiMousePointer, FiLayout, FiZap, FiEdit3 } = FiIcons;
+const { FiType, FiImage, FiMousePointer, FiLayout, FiZap, FiEdit3, FiShield } = FiIcons;
 
 const CustomizationPanel = ({ settings, onSettingsChange }) => {
   const [activeSection, setActiveSection] = useState('text');
 
   const updateSetting = (key, value) => {
-    onSettingsChange({
-      ...settings,
-      [key]: value
-    });
+    onSettingsChange({ ...settings, [key]: value });
   };
 
   const sections = [
@@ -21,6 +19,7 @@ const CustomizationPanel = ({ settings, onSettingsChange }) => {
     { id: 'button', label: 'Button Style', icon: FiMousePointer },
     { id: 'layout', label: 'Layout', icon: FiLayout },
     { id: 'form', label: 'Form Fields', icon: FiEdit3 },
+    { id: 'recaptcha', label: 'reCAPTCHA v3', icon: FiShield },
     { id: 'effects', label: 'Effects', icon: FiZap }
   ];
 
@@ -38,8 +37,8 @@ const CustomizationPanel = ({ settings, onSettingsChange }) => {
                 key={section.id}
                 onClick={() => setActiveSection(section.id)}
                 className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                  activeSection === section.id
-                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  activeSection === section.id 
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200' 
                     : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
@@ -70,6 +69,9 @@ const CustomizationPanel = ({ settings, onSettingsChange }) => {
             {activeSection === 'form' && (
               <FormSettings settings={settings} updateSetting={updateSetting} />
             )}
+            {activeSection === 'recaptcha' && (
+              <RecaptchaSettings settings={settings} updateSetting={updateSetting} />
+            )}
             {activeSection === 'effects' && (
               <EffectsSettings settings={settings} updateSetting={updateSetting} />
             )}
@@ -83,7 +85,6 @@ const CustomizationPanel = ({ settings, onSettingsChange }) => {
 const TextSettings = ({ settings, updateSetting }) => (
   <div className="space-y-6">
     <h3 className="text-lg font-semibold text-gray-900">Text & Content</h3>
-    
     <div className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
@@ -94,7 +95,6 @@ const TextSettings = ({ settings, updateSetting }) => (
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
-      
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Subtitle</label>
         <input
@@ -104,7 +104,6 @@ const TextSettings = ({ settings, updateSetting }) => (
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
-      
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Button Text</label>
         <input
@@ -114,7 +113,6 @@ const TextSettings = ({ settings, updateSetting }) => (
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
-      
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Title Color</label>
@@ -142,7 +140,6 @@ const TextSettings = ({ settings, updateSetting }) => (
 const BackgroundSettings = ({ settings, updateSetting }) => (
   <div className="space-y-6">
     <h3 className="text-lg font-semibold text-gray-900">Background</h3>
-    
     <div className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Background Type</label>
@@ -156,7 +153,6 @@ const BackgroundSettings = ({ settings, updateSetting }) => (
           <option value="image">Image</option>
         </select>
       </div>
-      
       {settings.backgroundType === 'color' && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Background Color</label>
@@ -168,7 +164,6 @@ const BackgroundSettings = ({ settings, updateSetting }) => (
           />
         </div>
       )}
-      
       {settings.backgroundType === 'image' && (
         <div className="space-y-4">
           <div>
@@ -181,7 +176,6 @@ const BackgroundSettings = ({ settings, updateSetting }) => (
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          
           <div className="flex items-center space-x-2">
             <input
               type="checkbox"
@@ -192,7 +186,6 @@ const BackgroundSettings = ({ settings, updateSetting }) => (
             />
             <label htmlFor="overlay" className="text-sm text-gray-700">Add overlay</label>
           </div>
-          
           {settings.backgroundOverlay && (
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -228,7 +221,6 @@ const BackgroundSettings = ({ settings, updateSetting }) => (
 const ButtonSettings = ({ settings, updateSetting }) => (
   <div className="space-y-6">
     <h3 className="text-lg font-semibold text-gray-900">Button Style</h3>
-    
     <div className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Button Style</label>
@@ -244,7 +236,6 @@ const ButtonSettings = ({ settings, updateSetting }) => (
           <option value="outline">Outline</option>
         </select>
       </div>
-      
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Button Size</label>
         <select
@@ -257,7 +248,6 @@ const ButtonSettings = ({ settings, updateSetting }) => (
           <option value="large">Large</option>
         </select>
       </div>
-      
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Button Color</label>
@@ -278,7 +268,6 @@ const ButtonSettings = ({ settings, updateSetting }) => (
           />
         </div>
       </div>
-      
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Border Radius</label>
         <input
@@ -298,7 +287,6 @@ const ButtonSettings = ({ settings, updateSetting }) => (
 const LayoutSettings = ({ settings, updateSetting }) => (
   <div className="space-y-6">
     <h3 className="text-lg font-semibold text-gray-900">Layout</h3>
-    
     <div className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Alignment</label>
@@ -312,7 +300,6 @@ const LayoutSettings = ({ settings, updateSetting }) => (
           <option value="right">Right</option>
         </select>
       </div>
-      
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Padding</label>
         <select
@@ -325,7 +312,6 @@ const LayoutSettings = ({ settings, updateSetting }) => (
           <option value="large">Large</option>
         </select>
       </div>
-      
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Max Width</label>
         <input
@@ -343,7 +329,6 @@ const LayoutSettings = ({ settings, updateSetting }) => (
 const FormSettings = ({ settings, updateSetting }) => (
   <div className="space-y-6">
     <h3 className="text-lg font-semibold text-gray-900">Form Fields</h3>
-    
     <div className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Form Style</label>
@@ -357,10 +342,8 @@ const FormSettings = ({ settings, updateSetting }) => (
           <option value="grid">Grid</option>
         </select>
       </div>
-      
       <div className="space-y-3">
         <h4 className="font-medium text-gray-800">Show Fields</h4>
-        
         <div className="flex items-center space-x-2">
           <input
             type="checkbox"
@@ -371,7 +354,6 @@ const FormSettings = ({ settings, updateSetting }) => (
           />
           <label htmlFor="datePicker" className="text-sm text-gray-700">Date Picker</label>
         </div>
-        
         <div className="flex items-center space-x-2">
           <input
             type="checkbox"
@@ -382,7 +364,6 @@ const FormSettings = ({ settings, updateSetting }) => (
           />
           <label htmlFor="timePicker" className="text-sm text-gray-700">Time Picker</label>
         </div>
-        
         <div className="flex items-center space-x-2">
           <input
             type="checkbox"
@@ -393,7 +374,6 @@ const FormSettings = ({ settings, updateSetting }) => (
           />
           <label htmlFor="guestCount" className="text-sm text-gray-700">Guest Count</label>
         </div>
-        
         <div className="flex items-center space-x-2">
           <input
             type="checkbox"
@@ -412,7 +392,6 @@ const FormSettings = ({ settings, updateSetting }) => (
 const EffectsSettings = ({ settings, updateSetting }) => (
   <div className="space-y-6">
     <h3 className="text-lg font-semibold text-gray-900">Effects</h3>
-    
     <div className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Animation</label>
@@ -428,7 +407,6 @@ const EffectsSettings = ({ settings, updateSetting }) => (
           <option value="zoomIn">Zoom In</option>
         </select>
       </div>
-      
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Shadow</label>
         <select
@@ -442,7 +420,6 @@ const EffectsSettings = ({ settings, updateSetting }) => (
           <option value="large">Large</option>
         </select>
       </div>
-      
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Border Radius</label>
         <input

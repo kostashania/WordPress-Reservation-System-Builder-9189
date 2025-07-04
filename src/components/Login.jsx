@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
 
-const { FiUser, FiLock, FiEye, FiEyeOff } = FiIcons;
+const { FiUser, FiLock, FiEye, FiEyeOff, FiUserPlus } = FiIcons;
 
-const Login = ({ onLogin }) => {
+const Login = ({ onLogin, showRegister, setShowRegister }) => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: '',
     password: ''
@@ -17,14 +19,39 @@ const Login = ({ onLogin }) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simple login simulation - no verification required
-    setTimeout(() => {
-      onLogin({
-        username: formData.username,
-        id: Date.now()
-      });
-      setIsLoading(false);
-    }, 1000);
+    // Check for admin credentials
+    if (formData.username === 'admin' && formData.password === '1234567') {
+      setTimeout(() => {
+        onLogin({
+          username: 'admin',
+          role: 'admin',
+          id: 'admin_001'
+        });
+        setIsLoading(false);
+      }, 1000);
+      return;
+    }
+
+    // Check for registered users
+    const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+    const user = registeredUsers.find(u => u.username === formData.username && u.password === formData.password);
+    
+    if (user) {
+      setTimeout(() => {
+        onLogin({
+          username: user.username,
+          email: user.email,
+          role: 'user',
+          id: user.id
+        });
+        setIsLoading(false);
+      }, 1000);
+    } else {
+      setTimeout(() => {
+        alert('Invalid credentials. Please try again or register a new account.');
+        setIsLoading(false);
+      }, 1000);
+    }
   };
 
   const handleChange = (e) => {
@@ -129,7 +156,26 @@ const Login = ({ onLogin }) => {
               'Sign In'
             )}
           </motion.button>
+
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={() => navigate('/register')}
+              className="flex items-center justify-center space-x-2 w-full py-3 px-4 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+            >
+              <SafeIcon icon={FiUserPlus} className="h-4 w-4" />
+              <span>Create New Account</span>
+            </button>
+          </div>
         </motion.form>
+
+        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <h4 className="font-semibold text-yellow-800 mb-2">Demo Credentials:</h4>
+          <p className="text-yellow-700 text-sm">
+            <strong>Admin:</strong> admin / 1234567<br/>
+            <strong>Or register</strong> a new user account
+          </p>
+        </div>
       </motion.div>
     </div>
   );
