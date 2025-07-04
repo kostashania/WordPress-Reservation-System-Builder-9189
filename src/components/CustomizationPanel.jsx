@@ -3,8 +3,9 @@ import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
 import RecaptchaSettings from './RecaptchaSettings';
+import EmailSettings from './EmailSettings';
 
-const { FiType, FiImage, FiMousePointer, FiLayout, FiZap, FiEdit3, FiShield } = FiIcons;
+const { FiType, FiImage, FiMousePointer, FiLayout, FiZap, FiEdit3, FiShield, FiMail } = FiIcons;
 
 const CustomizationPanel = ({ settings, onSettingsChange }) => {
   const [activeSection, setActiveSection] = useState('text');
@@ -19,6 +20,7 @@ const CustomizationPanel = ({ settings, onSettingsChange }) => {
     { id: 'button', label: 'Button Style', icon: FiMousePointer },
     { id: 'layout', label: 'Layout', icon: FiLayout },
     { id: 'form', label: 'Form Fields', icon: FiEdit3 },
+    { id: 'email', label: 'Email Notifications', icon: FiMail },
     { id: 'recaptcha', label: 'reCAPTCHA v3', icon: FiShield },
     { id: 'effects', label: 'Effects', icon: FiZap }
   ];
@@ -37,8 +39,8 @@ const CustomizationPanel = ({ settings, onSettingsChange }) => {
                 key={section.id}
                 onClick={() => setActiveSection(section.id)}
                 className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                  activeSection === section.id 
-                    ? 'bg-blue-50 text-blue-700 border border-blue-200' 
+                  activeSection === section.id
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
                     : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
@@ -68,6 +70,9 @@ const CustomizationPanel = ({ settings, onSettingsChange }) => {
             )}
             {activeSection === 'form' && (
               <FormSettings settings={settings} updateSetting={updateSetting} />
+            )}
+            {activeSection === 'email' && (
+              <EmailSettings settings={settings} updateSetting={updateSetting} />
             )}
             {activeSection === 'recaptcha' && (
               <RecaptchaSettings settings={settings} updateSetting={updateSetting} />

@@ -172,8 +172,50 @@ const HtmlExporter = ({ settings }) => {
       }
     ` : '';
 
+    // Email sending functionality
+    const emailHandling = settings.enableEmailNotifications ? `
+      // Send email notification
+      async function sendEmailNotification(formData) {
+        try {
+          const response = await fetch('/send-reservation-email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              formData: formData,
+              emailSettings: {
+                notificationEmails: ${JSON.stringify(settings.notificationEmails || [])},
+                emailSubject: '${settings.emailSubject || 'New Table Reservation Request'}',
+                emailTemplate: \`${settings.emailTemplate || 'New reservation request from {{customer_name}}'}\`,
+                smtpSettings: {
+                  host: '${settings.smtpHost || ''}',
+                  port: ${settings.smtpPort || 587},
+                  secure: ${settings.smtpSecure || false},
+                  auth: {
+                    user: '${settings.smtpUsername || ''}',
+                    pass: '${settings.smtpPassword || ''}'
+                  },
+                  from: {
+                    name: '${settings.smtpFromName || 'Restaurant'}',
+                    address: '${settings.smtpFromEmail || ''}'
+                  }
+                }
+              }
+            })
+          });
+          
+          const result = await response.json();
+          return result.success;
+        } catch (error) {
+          console.error('Email sending failed:', error);
+          return false;
+        }
+      }
+    ` : '';
+
     return `
-<!-- Table Reservation Section with reCAPTCHA v3 -->
+<!-- Table Reservation Section with Email Notifications -->
 ${recaptchaScript}
 <div style="${sectionStyle}">
   ${settings.backgroundType === 'image' && settings.backgroundOverlay ? `<div style="${overlayStyle}"></div>` : ''}
@@ -208,7 +250,9 @@ ${recaptchaScript}
         </div>
       </div>
       
-      <button type="submit" style="${buttonStyle}" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+      <button type="submit" style="${buttonStyle}" 
+              onmouseover="this.style.transform='scale(1.05)'" 
+              onmouseout="this.style.transform='scale(1)'">
         ${settings.buttonText}
       </button>
     </form>
@@ -238,6 +282,7 @@ ${recaptchaScript}
 
 <script>
   ${recaptchaValidation}
+  ${emailHandling}
   
   // Form submission handler
   async function handleFormSubmit(event) {
@@ -256,8 +301,14 @@ ${recaptchaScript}
     const formData = new FormData(event.target);
     const data = Object.fromEntries(formData);
     
-    // You can customize this to send data to your server
-    console.log('Reservation data:', data);
+    ${settings.enableEmailNotifications ? `
+    // Send email notification
+    const emailSent = await sendEmailNotification(data);
+    if (!emailSent) {
+      alert('Failed to send reservation request. Please try again or contact us directly.');
+      return false;
+    }
+    ` : ''}
     
     // Show success message
     alert('Reservation submitted successfully! We will contact you soon.');
@@ -328,10 +379,22 @@ ${recaptchaScript}
         </ol>
       </div>
 
-      {settings.enableRecaptcha && (
+      {settings.enableEmailNotifications && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <h4 className="font-semibold text-green-800 mb-2">reCAPTCHA v3 Integration:</h4>
+          <h4 className="font-semibold text-green-800 mb-2">Email Notifications Setup:</h4>
           <ul className="list-disc list-inside space-y-1 text-green-700 text-sm">
+            <li>Email notifications are configured to send to: {(settings.notificationEmails || []).join(', ')}</li>
+            <li>SMTP server: {settings.smtpHost || 'Not configured'}</li>
+            <li>You'll need to implement server-side PHP code to handle email sending</li>
+            <li>The form will POST to '/send-reservation-email' endpoint</li>
+          </ul>
+        </div>
+      )}
+
+      {settings.enableRecaptcha && (
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+          <h4 className="font-semibold text-purple-800 mb-2">reCAPTCHA v3 Integration:</h4>
+          <ul className="list-disc list-inside space-y-1 text-purple-700 text-sm">
             <li>reCAPTCHA v3 runs automatically in the background</li>
             <li>No user interaction required - completely invisible</li>
             <li>Provides a score (0.0-1.0) based on user behavior</li>
@@ -341,41 +404,56 @@ ${recaptchaScript}
         </div>
       )}
 
-      {settings.enableRecaptcha && settings.recaptchaSecretKey && (
+      {settings.enableEmailNotifications && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <h4 className="font-semibold text-yellow-800 mb-2">Server-side Verification Example:</h4>
-          <p className="text-sm text-yellow-700 mb-3">
-            Add this PHP code to your server to verify reCAPTCHA v3 tokens:
-          </p>
+          <h4 className="font-semibold text-yellow-800 mb-2">Server-side Email Handler (PHP Example):</h4>
           <div className="bg-gray-800 rounded p-3 overflow-x-auto">
             <code className="text-green-400 text-xs whitespace-pre">
-{`<?php
-$recaptcha_secret = '${settings.recaptchaSecretKey}';
-$recaptcha_token = $_POST['g-recaptcha-response'];
+              {`<?php
+// send-reservation-email.php
+require 'vendor/autoload.php'; // PHPMailer
 
-$url = 'https://www.google.com/recaptcha/api/siteverify';
-$data = [
-    'secret' => $recaptcha_secret,
-    'response' => $recaptcha_token
-];
+use PHPMailer\\PHPMailer\\PHPMailer;
+use PHPMailer\\PHPMailer\\SMTP;
 
-$options = [
-    'http' => [
-        'method' => 'POST',
-        'content' => http_build_query($data)
-    ]
-];
+header('Content-Type: application/json');
 
-$context = stream_context_create($options);
-$response = file_get_contents($url, false, $context);
-$result = json_decode($response);
+$input = json_decode(file_get_contents('php://input'), true);
+$formData = $input['formData'];
+$emailSettings = $input['emailSettings'];
 
-if ($result->success && $result->score >= ${settings.recaptchaThreshold || 0.5}) {
-    // Valid submission - process the reservation
-    echo "Reservation accepted!";
-} else {
-    // Invalid submission - reject
-    echo "Security verification failed!";
+$mail = new PHPMailer(true);
+
+try {
+    // SMTP configuration
+    $mail->isSMTP();
+    $mail->Host = '${settings.smtpHost || 'smtp.gmail.com'}';
+    $mail->SMTPAuth = true;
+    $mail->Username = '${settings.smtpUsername || 'your-email@gmail.com'}';
+    $mail->Password = '${settings.smtpPassword || 'your-app-password'}';
+    $mail->SMTPSecure = ${settings.smtpSecure ? 'PHPMailer::ENCRYPTION_STARTTLS' : 'false'};
+    $mail->Port = ${settings.smtpPort || 587};
+
+    // Recipients
+    $mail->setFrom('${settings.smtpFromEmail || 'noreply@restaurant.com'}', '${settings.smtpFromName || 'Restaurant'}');
+    foreach ($emailSettings['notificationEmails'] as $email) {
+        $mail->addAddress($email);
+    }
+
+    // Content
+    $mail->isHTML(true);
+    $mail->Subject = $emailSettings['emailSubject'];
+    
+    $body = $emailSettings['emailTemplate'];
+    foreach ($formData as $key => $value) {
+        $body = str_replace('{{' . $key . '}}', $value, $body);
+    }
+    $mail->Body = nl2br($body);
+
+    $mail->send();
+    echo json_encode(['success' => true]);
+} catch (Exception $e) {
+    echo json_encode(['success' => false, 'error' => $mail->ErrorInfo]);
 }
 ?>`}
             </code>
