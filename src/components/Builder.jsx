@@ -6,7 +6,6 @@ import SafeIcon from '../common/SafeIcon';
 import CustomizationPanel from './CustomizationPanel';
 import PreviewSection from './PreviewSection';
 import HtmlExporter from './HtmlExporter';
-import supabase from '../lib/supabase';
 
 const { FiArrowLeft, FiSave, FiCode, FiEye, FiSettings } = FiIcons;
 
@@ -97,140 +96,109 @@ const Builder = ({ user, onLogout }) => {
     }
   }, [id]);
 
-  const loadSection = async (sectionId) => {
+  const loadSection = (sectionId) => {
     try {
-      // Try Supabase first
-      const { data, error } = await supabase
-        .from('reservation_sections_db9x8k7m2q')
-        .select('*')
-        .eq('id', sectionId)
-        .single();
-        
-      if (data && !error) {
-        setSectionName(data.name);
-        setSettings(data.settings);
-        return;
-      }
+      console.log('Loading section with ID:', sectionId);
       
-      // Fallback to localStorage
       const savedSections = localStorage.getItem('reservationSections');
       if (savedSections) {
         const sections = JSON.parse(savedSections);
-        const section = sections.find(s => s.id === parseInt(sectionId));
+        console.log('All sections:', sections);
+        
+        const section = sections.find(s => s.id === parseInt(sectionId) || s.id === sectionId);
+        console.log('Found section:', section);
+        
         if (section) {
           setSectionName(section.name);
-          setSettings(section.settings);
+          setSettings(section.settings || settings);
+        } else {
+          console.log('Section not found');
         }
+      } else {
+        console.log('No sections found in localStorage');
       }
     } catch (error) {
       console.error('Error loading section:', error);
-      // Fallback to localStorage on error
-      const savedSections = localStorage.getItem('reservationSections');
-      if (savedSections) {
-        const sections = JSON.parse(savedSections);
-        const section = sections.find(s => s.id === parseInt(sectionId));
-        if (section) {
-          setSectionName(section.name);
-          setSettings(section.settings);
-        }
-      }
     }
   };
 
-  const saveSection = async () => {
+  const saveSection = () => {
     if (!sectionName.trim()) {
       alert('Please enter a section name');
       return;
     }
 
+    console.log('Starting save process...');
+    console.log('Section name:', sectionName);
+    console.log('User:', user);
+    console.log('Settings:', settings);
+
     setIsSaving(true);
     
     try {
+      const timestamp = new Date().toISOString();
+      
+      // Create section data
       const sectionData = {
+        id: id ? (typeof id === 'string' ? parseInt(id) : id) : Date.now(),
         name: sectionName,
         settings: settings,
-        user_id: user.id
+        user_id: user.id,
+        userId: user.id, // Keep both for compatibility
+        created_at: id ? undefined : timestamp,
+        updated_at: timestamp,
+        createdAt: id ? undefined : timestamp,
+        updatedAt: timestamp,
+        isActive: true
       };
 
-      let result = null;
+      console.log('Section data to save:', sectionData);
 
-      try {
-        // Try Supabase first
-        if (id) {
-          const { data, error } = await supabase
-            .from('reservation_sections_db9x8k7m2q')
-            .update(sectionData)
-            .eq('id', id)
-            .select()
-            .single();
-            
-          if (!error && data) {
-            result = data;
-          } else {
-            throw new Error(error?.message || 'Update failed');
-          }
+      // Get existing sections
+      const savedSections = localStorage.getItem('reservationSections');
+      let sections = savedSections ? JSON.parse(savedSections) : [];
+      
+      console.log('Existing sections:', sections);
+
+      if (id) {
+        // Update existing section
+        const index = sections.findIndex(s => s.id === parseInt(id) || s.id === id);
+        if (index !== -1) {
+          // Keep the original created_at date
+          sectionData.created_at = sections[index].created_at;
+          sectionData.createdAt = sections[index].createdAt;
+          sections[index] = sectionData;
+          console.log('Updated existing section at index:', index);
         } else {
-          const { data, error } = await supabase
-            .from('reservation_sections_db9x8k7m2q')
-            .insert([sectionData])
-            .select()
-            .single();
-            
-          if (!error && data) {
-            result = data;
-          } else {
-            throw new Error(error?.message || 'Insert failed');
-          }
+          // Section not found, add as new
+          sections.push(sectionData);
+          console.log('Section not found, added as new');
         }
-      } catch (supabaseError) {
-        console.warn('Supabase operation failed, using localStorage:', supabaseError);
-        
-        // Fallback to localStorage
-        const timestamp = new Date().toISOString();
-        const newId = id ? parseInt(id) : Date.now();
-        
-        const fallbackData = {
-          id: newId,
-          name: sectionName,
-          settings: settings,
-          user_id: user.id,
-          userId: user.id,
-          created_at: id ? undefined : timestamp,
-          updated_at: timestamp,
-          createdAt: id ? undefined : timestamp,
-          updatedAt: timestamp
-        };
-
-        const savedSections = localStorage.getItem('reservationSections');
-        const sections = savedSections ? JSON.parse(savedSections) : [];
-
-        if (id) {
-          const index = sections.findIndex(s => s.id === parseInt(id));
-          if (index !== -1) {
-            sections[index] = fallbackData;
-          } else {
-            sections.push(fallbackData);
-          }
-        } else {
-          sections.push(fallbackData);
-        }
-
-        localStorage.setItem('reservationSections', JSON.stringify(sections));
-        result = fallbackData;
+      } else {
+        // Add new section
+        sections.push(sectionData);
+        console.log('Added new section');
       }
 
-      if (result) {
+      // Save to localStorage
+      localStorage.setItem('reservationSections', JSON.stringify(sections));
+      console.log('Saved to localStorage');
+
+      // Verify save
+      const verification = localStorage.getItem('reservationSections');
+      const verifiedSections = JSON.parse(verification);
+      console.log('Verification - sections after save:', verifiedSections);
+
+      setTimeout(() => {
         setShowSaveModal(false);
         setIsSaving(false);
         alert(`Section "${sectionName}" saved successfully!`);
         navigate('/dashboard');
-      } else {
-        throw new Error('Failed to save section');
-      }
+      }, 500);
       
     } catch (error) {
       console.error('Error saving section:', error);
-      alert('Error saving section. Please try again.');
+      alert('Error saving section: ' + error.message);
       setIsSaving(false);
     }
   };
