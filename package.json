@@ -21,7 +21,9 @@
     "echarts": "^5.5.0",
     "echarts-for-react": "^3.0.2",
     "date-fns": "4.1.0",
-    "react-color": "^2.19.3"
+    "react-color": "^2.19.3",
+    "uuid": "^9.0.1",
+    "emailjs-com": "^3.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",

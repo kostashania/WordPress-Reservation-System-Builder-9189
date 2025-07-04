@@ -3,10 +3,16 @@ import { motion } from 'framer-motion';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
 
-const { FiCopy, FiDownload, FiCheck } = FiIcons;
+const { FiCopy, FiDownload, FiCheck, FiShield } = FiIcons;
 
 const HtmlExporter = ({ settings }) => {
   const [copied, setCopied] = useState(false);
+
+  const maskSensitiveData = (value, showLength = 4) => {
+    if (!value) return '';
+    if (value.length <= showLength) return '*'.repeat(value.length);
+    return value.substring(0, showLength) + '*'.repeat(Math.max(8, value.length - showLength));
+  };
 
   const generateHtml = () => {
     const getShadowClass = () => {
@@ -41,12 +47,18 @@ const HtmlExporter = ({ settings }) => {
       const radius = `border-radius: ${settings.buttonRadius}px;`;
       
       switch (settings.buttonStyle) {
-        case 'modern': return `${baseStyle} ${radius} font-weight: 600; transition: all 0.2s; cursor: pointer;`;
-        case 'classic': return `${baseStyle} ${radius} font-weight: 500; border: 2px solid ${settings.buttonColor}; transition: all 0.2s; cursor: pointer;`;
-        case 'minimal': return `${baseStyle} border-radius: 0; font-weight: 500; border-bottom: 2px solid ${settings.buttonColor}; background: transparent; transition: all 0.2s; cursor: pointer;`;
-        case 'gradient': return `${baseStyle} ${radius} font-weight: 600; background: linear-gradient(45deg, ${settings.buttonColor}, ${settings.buttonHoverColor}); transition: all 0.2s; cursor: pointer;`;
-        case 'outline': return `${baseStyle} ${radius} font-weight: 500; border: 2px solid ${settings.buttonColor}; background: transparent; transition: all 0.2s; cursor: pointer;`;
-        default: return `${baseStyle} ${radius} font-weight: 600; transition: all 0.2s; cursor: pointer;`;
+        case 'modern':
+          return `${baseStyle} ${radius} font-weight: 600; transition: all 0.2s; cursor: pointer;`;
+        case 'classic':
+          return `${baseStyle} ${radius} font-weight: 500; border: 2px solid ${settings.buttonColor}; transition: all 0.2s; cursor: pointer;`;
+        case 'minimal':
+          return `${baseStyle} border-radius: 0; font-weight: 500; border-bottom: 2px solid ${settings.buttonColor}; background: transparent; transition: all 0.2s; cursor: pointer;`;
+        case 'gradient':
+          return `${baseStyle} ${radius} font-weight: 600; background: linear-gradient(45deg, ${settings.buttonColor}, ${settings.buttonHoverColor}); transition: all 0.2s; cursor: pointer;`;
+        case 'outline':
+          return `${baseStyle} ${radius} font-weight: 500; border: 2px solid ${settings.buttonColor}; background: transparent; transition: all 0.2s; cursor: pointer;`;
+        default:
+          return `${baseStyle} ${radius} font-weight: 600; transition: all 0.2s; cursor: pointer;`;
       }
     };
 
@@ -158,7 +170,7 @@ const HtmlExporter = ({ settings }) => {
             },
             body: JSON.stringify({
               token: token,
-              secret: '${settings.recaptchaSecretKey || '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'}',
+              secret: 'YOUR_SECRET_KEY_HERE', // Replace with your actual secret key
               threshold: ${settings.recaptchaThreshold || 0.5}
             })
           });
@@ -189,16 +201,16 @@ const HtmlExporter = ({ settings }) => {
                 emailSubject: '${settings.emailSubject || 'New Table Reservation Request'}',
                 emailTemplate: \`${settings.emailTemplate || 'New reservation request from {{customer_name}}'}\`,
                 smtpSettings: {
-                  host: '${settings.smtpHost || ''}',
-                  port: ${settings.smtpPort || 587},
-                  secure: ${settings.smtpSecure || false},
+                  host: 'YOUR_SMTP_HOST', // Replace with your SMTP host
+                  port: 587,
+                  secure: false,
                   auth: {
-                    user: '${settings.smtpUsername || ''}',
-                    pass: '${settings.smtpPassword || ''}'
+                    user: 'YOUR_SMTP_USERNAME', // Replace with your SMTP username
+                    pass: 'YOUR_SMTP_PASSWORD'  // Replace with your SMTP password
                   },
                   from: {
-                    name: '${settings.smtpFromName || 'Restaurant'}',
-                    address: '${settings.smtpFromEmail || ''}'
+                    name: 'YOUR_FROM_NAME',     // Replace with your from name
+                    address: 'YOUR_FROM_EMAIL'  // Replace with your from email
                   }
                 }
               }
@@ -362,6 +374,20 @@ ${recaptchaScript}
         </div>
       </div>
 
+      {/* Security Notice */}
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+        <div className="flex items-start space-x-3">
+          <SafeIcon icon={FiShield} className="h-5 w-5 text-amber-600 mt-0.5" />
+          <div>
+            <h4 className="font-medium text-amber-900">Security Notice</h4>
+            <p className="text-sm text-amber-800 mt-1">
+              Sensitive data like API keys and passwords have been masked in the exported code. 
+              You'll need to replace the placeholder values with your actual credentials before deploying.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="bg-gray-900 rounded-lg p-4">
         <pre className="text-green-400 text-sm overflow-x-auto">
           <code>{generateHtml()}</code>
@@ -375,6 +401,7 @@ ${recaptchaScript}
           <li>Go to your WordPress post/page editor</li>
           <li>Add an HTML block (or Custom HTML block)</li>
           <li>Paste the code into the HTML block</li>
+          <li>Replace placeholder values with your actual credentials</li>
           <li>Save and publish your page</li>
         </ol>
       </div>
@@ -384,9 +411,10 @@ ${recaptchaScript}
           <h4 className="font-semibold text-green-800 mb-2">Email Notifications Setup:</h4>
           <ul className="list-disc list-inside space-y-1 text-green-700 text-sm">
             <li>Email notifications are configured to send to: {(settings.notificationEmails || []).join(', ')}</li>
-            <li>SMTP server: {settings.smtpHost || 'Not configured'}</li>
+            <li>SMTP server: {settings.smtpHost ? maskSensitiveData(settings.smtpHost, 6) : 'Not configured'}</li>
             <li>You'll need to implement server-side PHP code to handle email sending</li>
             <li>The form will POST to '/send-reservation-email' endpoint</li>
+            <li>Replace 'YOUR_SMTP_*' placeholders with your actual SMTP credentials</li>
           </ul>
         </div>
       )}
@@ -399,6 +427,8 @@ ${recaptchaScript}
             <li>No user interaction required - completely invisible</li>
             <li>Provides a score (0.0-1.0) based on user behavior</li>
             <li>Form submissions are validated against bot traffic</li>
+            <li>Site Key: {settings.recaptchaSiteKey ? maskSensitiveData(settings.recaptchaSiteKey, 8) : 'Not configured'}</li>
+            <li>Replace 'YOUR_SECRET_KEY_HERE' with your actual reCAPTCHA secret key</li>
             <li>Implement server-side verification for production use</li>
           </ul>
         </div>
@@ -427,15 +457,15 @@ $mail = new PHPMailer(true);
 try {
     // SMTP configuration
     $mail->isSMTP();
-    $mail->Host = '${settings.smtpHost || 'smtp.gmail.com'}';
+    $mail->Host = '${settings.smtpHost ? maskSensitiveData(settings.smtpHost, 6) : 'YOUR_SMTP_HOST'}';
     $mail->SMTPAuth = true;
-    $mail->Username = '${settings.smtpUsername || 'your-email@gmail.com'}';
-    $mail->Password = '${settings.smtpPassword || 'your-app-password'}';
+    $mail->Username = '${settings.smtpUsername ? maskSensitiveData(settings.smtpUsername, 6) : 'YOUR_SMTP_USERNAME'}';
+    $mail->Password = '${settings.smtpPassword ? '••••••••' : 'YOUR_SMTP_PASSWORD'}';
     $mail->SMTPSecure = ${settings.smtpSecure ? 'PHPMailer::ENCRYPTION_STARTTLS' : 'false'};
     $mail->Port = ${settings.smtpPort || 587};
 
     // Recipients
-    $mail->setFrom('${settings.smtpFromEmail || 'noreply@restaurant.com'}', '${settings.smtpFromName || 'Restaurant'}');
+    $mail->setFrom('${settings.smtpFromEmail ? maskSensitiveData(settings.smtpFromEmail, 6) : 'YOUR_FROM_EMAIL'}', '${settings.smtpFromName || 'YOUR_FROM_NAME'}');
     foreach ($emailSettings['notificationEmails'] as $email) {
         $mail->addAddress($email);
     }
@@ -443,7 +473,6 @@ try {
     // Content
     $mail->isHTML(true);
     $mail->Subject = $emailSettings['emailSubject'];
-    
     $body = $emailSettings['emailTemplate'];
     foreach ($formData as $key => $value) {
         $body = str_replace('{{' . $key . '}}', $value, $body);

@@ -3,50 +3,134 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
+import supabase from '../lib/supabase';
 
-const { FiPlus, FiEdit3, FiTrash2, FiCopy, FiDownload, FiUpload, FiLogOut, FiCalendar, FiEye } = FiIcons;
+const { FiPlus, FiEdit3, FiTrash2, FiCopy, FiDownload, FiUpload, FiLogOut, FiCalendar, FiEye, FiDatabase } = FiIcons;
 
 const Dashboard = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const [sections, setSections] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [dbStatus, setDbStatus] = useState('checking');
 
   useEffect(() => {
+    checkDatabaseConnection();
     loadSections();
   }, []);
 
-  const loadSections = () => {
-    const savedSections = localStorage.getItem('reservationSections');
-    if (savedSections) {
-      setSections(JSON.parse(savedSections));
+  const checkDatabaseConnection = async () => {
+    try {
+      if (supabase.from) {
+        const { data, error } = await supabase.from('reservation_sections_db').select('count', { count: 'exact' });
+        if (!error) {
+          setDbStatus('connected');
+        } else {
+          setDbStatus('localStorage');
+        }
+      } else {
+        setDbStatus('localStorage');
+      }
+    } catch (error) {
+      setDbStatus('localStorage');
     }
   };
 
-  const deleteSectionHandler = (id) => {
+  const loadSections = async () => {
+    try {
+      if (supabase.from) {
+        const { data, error } = await supabase
+          .from('reservation_sections_db')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+          
+        if (data && !error) {
+          setSections(data);
+          return;
+        }
+      }
+      
+      // Fallback to localStorage
+      const savedSections = localStorage.getItem('reservationSections');
+      if (savedSections) {
+        const allSections = JSON.parse(savedSections);
+        const userSections = allSections.filter(section => section.userId === user.id);
+        setSections(userSections);
+      }
+    } catch (error) {
+      console.error('Error loading sections:', error);
+      // Fallback to localStorage
+      const savedSections = localStorage.getItem('reservationSections');
+      if (savedSections) {
+        setSections(JSON.parse(savedSections));
+      }
+    }
+  };
+
+  const deleteSectionHandler = async (id) => {
     if (window.confirm('Are you sure you want to delete this section?')) {
-      const updatedSections = sections.filter(section => section.id !== id);
-      setSections(updatedSections);
-      localStorage.setItem('reservationSections', JSON.stringify(updatedSections));
+      try {
+        if (supabase.from) {
+          const { error } = await supabase
+            .from('reservation_sections_db')
+            .delete()
+            .eq('id', id);
+            
+          if (!error) {
+            setSections(sections.filter(section => section.id !== id));
+            return;
+          }
+        }
+        
+        // Fallback to localStorage
+        const savedSections = localStorage.getItem('reservationSections');
+        if (savedSections) {
+          const allSections = JSON.parse(savedSections);
+          const updatedSections = allSections.filter(section => section.id !== id);
+          setSections(sections.filter(section => section.id !== id));
+          localStorage.setItem('reservationSections', JSON.stringify(updatedSections));
+        }
+      } catch (error) {
+        console.error('Error deleting section:', error);
+      }
     }
   };
 
-  const duplicateSection = (section) => {
-    const newSection = {
-      ...section,
-      id: Date.now(),
-      name: `${section.name} (Copy)`,
-      createdAt: new Date().toISOString()
-    };
-    const updatedSections = [...sections, newSection];
-    setSections(updatedSections);
-    localStorage.setItem('reservationSections', JSON.stringify(updatedSections));
+  const duplicateSection = async (section) => {
+    try {
+      const newSection = {
+        ...section,
+        id: Date.now(),
+        name: `${section.name} (Copy)`,
+        created_at: new Date().toISOString()
+      };
+
+      if (supabase.from) {
+        const { data, error } = await supabase
+          .from('reservation_sections_db')
+          .insert([newSection]);
+          
+        if (!error) {
+          setSections([newSection, ...sections]);
+          return;
+        }
+      }
+      
+      // Fallback to localStorage
+      const savedSections = localStorage.getItem('reservationSections');
+      const allSections = savedSections ? JSON.parse(savedSections) : [];
+      allSections.push(newSection);
+      setSections([newSection, ...sections]);
+      localStorage.setItem('reservationSections', JSON.stringify(allSections));
+    } catch (error) {
+      console.error('Error duplicating section:', error);
+    }
   };
 
   const exportSection = (section) => {
     const dataStr = JSON.stringify(section, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
     const exportFileDefaultName = `${section.name.replace(/\s+/g, '_')}.json`;
-    
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
@@ -57,18 +141,34 @@ const Dashboard = ({ user, onLogout }) => {
     const file = event.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         try {
           const importedSection = JSON.parse(e.target.result);
           const newSection = {
             ...importedSection,
             id: Date.now(),
             name: `${importedSection.name} (Imported)`,
-            createdAt: new Date().toISOString()
+            created_at: new Date().toISOString(),
+            user_id: user.id
           };
-          const updatedSections = [...sections, newSection];
-          setSections(updatedSections);
-          localStorage.setItem('reservationSections', JSON.stringify(updatedSections));
+
+          if (supabase.from) {
+            const { data, error } = await supabase
+              .from('reservation_sections_db')
+              .insert([newSection]);
+              
+            if (!error) {
+              setSections([newSection, ...sections]);
+              return;
+            }
+          }
+          
+          // Fallback to localStorage
+          const savedSections = localStorage.getItem('reservationSections');
+          const allSections = savedSections ? JSON.parse(savedSections) : [];
+          allSections.push(newSection);
+          setSections([newSection, ...sections]);
+          localStorage.setItem('reservationSections', JSON.stringify(allSections));
         } catch (error) {
           alert('Error importing section. Please check the file format.');
         }
@@ -85,7 +185,7 @@ const Dashboard = ({ user, onLogout }) => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex justify-between items-center mb-8"
@@ -93,6 +193,15 @@ const Dashboard = ({ user, onLogout }) => {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p className="text-gray-600 mt-1">Welcome back, {user.username}!</p>
+            <div className="flex items-center space-x-2 mt-2">
+              <SafeIcon icon={FiDatabase} className="h-4 w-4 text-gray-500" />
+              <span className="text-sm text-gray-500">
+                Database: 
+                <span className={`ml-1 ${dbStatus === 'connected' ? 'text-green-600' : 'text-yellow-600'}`}>
+                  {dbStatus === 'connected' ? 'Supabase Connected' : 'LocalStorage Fallback'}
+                </span>
+              </span>
+            </div>
           </div>
           <button
             onClick={onLogout}
@@ -104,7 +213,7 @@ const Dashboard = ({ user, onLogout }) => {
         </motion.div>
 
         {/* Actions Bar */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
@@ -117,7 +226,7 @@ const Dashboard = ({ user, onLogout }) => {
             <SafeIcon icon={FiPlus} className="h-5 w-5" />
             <span>Create New Section</span>
           </button>
-          
+
           <div className="flex space-x-2">
             <label className="flex items-center space-x-2 px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors cursor-pointer">
               <SafeIcon icon={FiUpload} className="h-4 w-4" />
@@ -143,7 +252,7 @@ const Dashboard = ({ user, onLogout }) => {
         </motion.div>
 
         {/* Sections Grid */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
@@ -177,7 +286,7 @@ const Dashboard = ({ user, onLogout }) => {
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-1">{section.name}</h3>
                       <p className="text-sm text-gray-500">
-                        Created {new Date(section.createdAt).toLocaleDateString()}
+                        Created {new Date(section.created_at).toLocaleDateString()}
                       </p>
                     </div>
                     <div className="flex space-x-1">
@@ -197,7 +306,7 @@ const Dashboard = ({ user, onLogout }) => {
                       </button>
                     </div>
                   </div>
-                  
+
                   <div className="flex flex-wrap gap-2 mb-4">
                     <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
                       {section.settings?.buttonStyle || 'Default'}
@@ -205,8 +314,18 @@ const Dashboard = ({ user, onLogout }) => {
                     <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
                       {section.settings?.backgroundType || 'Color'}
                     </span>
+                    {section.settings?.enableEmailNotifications && (
+                      <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+                        Email Enabled
+                      </span>
+                    )}
+                    {section.settings?.enableRecaptcha && (
+                      <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">
+                        reCAPTCHA
+                      </span>
+                    )}
                   </div>
-                  
+
                   <div className="flex space-x-2">
                     <button
                       onClick={() => duplicateSection(section)}

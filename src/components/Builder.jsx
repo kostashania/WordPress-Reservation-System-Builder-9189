@@ -6,6 +6,7 @@ import SafeIcon from '../common/SafeIcon';
 import CustomizationPanel from './CustomizationPanel';
 import PreviewSection from './PreviewSection';
 import HtmlExporter from './HtmlExporter';
+import supabase from '../lib/supabase';
 
 const { FiArrowLeft, FiSave, FiCode, FiEye, FiSettings } = FiIcons;
 
@@ -15,6 +16,7 @@ const Builder = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('customize');
   const [sectionName, setSectionName] = useState('');
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [settings, setSettings] = useState({
     // Text Settings
     title: 'Reserve Your Table',
@@ -63,7 +65,30 @@ const Builder = ({ user, onLogout }) => {
     recaptchaSiteKey: '',
     recaptchaSecretKey: '',
     recaptchaThreshold: 0.5,
-    recaptchaAction: 'reservation'
+    recaptchaAction: 'reservation',
+    
+    // Email Settings
+    enableEmailNotifications: false,
+    emailProvider: 'simple', // 'simple' or 'smtp'
+    notificationEmails: [],
+    emailSubject: 'New Table Reservation Request',
+    emailTemplate: '',
+    
+    // SMTP Settings (for advanced users)
+    smtpHost: '',
+    smtpPort: 587,
+    smtpUsername: '',
+    smtpPassword: '',
+    smtpFromName: '',
+    smtpFromEmail: '',
+    smtpSecure: false,
+    
+    // Simple Email Settings
+    simpleEmailService: 'emailjs', // 'emailjs' or 'webhook'
+    emailjsServiceId: '',
+    emailjsTemplateId: '',
+    emailjsPublicKey: '',
+    webhookUrl: ''
   });
 
   useEffect(() => {
@@ -72,48 +97,107 @@ const Builder = ({ user, onLogout }) => {
     }
   }, [id]);
 
-  const loadSection = (sectionId) => {
-    const savedSections = localStorage.getItem('reservationSections');
-    if (savedSections) {
-      const sections = JSON.parse(savedSections);
-      const section = sections.find(s => s.id === parseInt(sectionId));
-      if (section) {
-        setSectionName(section.name);
-        setSettings(section.settings);
+  const loadSection = async (sectionId) => {
+    try {
+      // Try Supabase first, fallback to localStorage
+      if (supabase.from) {
+        const { data, error } = await supabase
+          .from('reservation_sections_db')
+          .select('*')
+          .eq('id', parseInt(sectionId))
+          .single();
+          
+        if (data && !error) {
+          setSectionName(data.name);
+          setSettings(data.settings);
+          return;
+        }
       }
+      
+      // Fallback to localStorage
+      const savedSections = localStorage.getItem('reservationSections');
+      if (savedSections) {
+        const sections = JSON.parse(savedSections);
+        const section = sections.find(s => s.id === parseInt(sectionId));
+        if (section) {
+          setSectionName(section.name);
+          setSettings(section.settings);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading section:', error);
     }
   };
 
-  const saveSection = () => {
+  const saveSection = async () => {
     if (!sectionName.trim()) {
       alert('Please enter a section name');
       return;
     }
 
-    const savedSections = localStorage.getItem('reservationSections');
-    const sections = savedSections ? JSON.parse(savedSections) : [];
+    setIsSaving(true);
     
-    const sectionData = {
-      id: id ? parseInt(id) : Date.now(),
-      name: sectionName,
-      settings: settings,
-      userId: user.id,
-      createdAt: id ? sections.find(s => s.id === parseInt(id))?.createdAt : new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+    try {
+      const sectionData = {
+        id: id ? parseInt(id) : Date.now(),
+        name: sectionName,
+        settings: settings,
+        user_id: user.id,
+        created_at: id ? undefined : new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
 
-    if (id) {
-      const index = sections.findIndex(s => s.id === parseInt(id));
-      if (index !== -1) {
-        sections[index] = sectionData;
+      // Try Supabase first
+      if (supabase.from) {
+        if (id) {
+          const { error } = await supabase
+            .from('reservation_sections_db')
+            .update(sectionData)
+            .eq('id', parseInt(id));
+            
+          if (!error) {
+            setShowSaveModal(false);
+            setIsSaving(false);
+            navigate('/dashboard');
+            return;
+          }
+        } else {
+          const { error } = await supabase
+            .from('reservation_sections_db')
+            .insert([sectionData]);
+            
+          if (!error) {
+            setShowSaveModal(false);
+            setIsSaving(false);
+            navigate('/dashboard');
+            return;
+          }
+        }
       }
-    } else {
-      sections.push(sectionData);
-    }
 
-    localStorage.setItem('reservationSections', JSON.stringify(sections));
-    setShowSaveModal(false);
-    navigate('/dashboard');
+      // Fallback to localStorage
+      const savedSections = localStorage.getItem('reservationSections');
+      const sections = savedSections ? JSON.parse(savedSections) : [];
+
+      if (id) {
+        const index = sections.findIndex(s => s.id === parseInt(id));
+        if (index !== -1) {
+          sections[index] = sectionData;
+        }
+      } else {
+        sections.push(sectionData);
+      }
+
+      localStorage.setItem('reservationSections', JSON.stringify(sections));
+      setShowSaveModal(false);
+      setIsSaving(false);
+      navigate('/dashboard');
+      
+    } catch (error) {
+      console.error('Error saving section:', error);
+      alert('Error saving section. Please try again.');
+      setIsSaving(false);
+    }
   };
 
   const tabs = [
@@ -144,10 +228,11 @@ const Builder = ({ user, onLogout }) => {
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => setShowSaveModal(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                disabled={isSaving}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <SafeIcon icon={FiSave} className="h-4 w-4" />
-                <span>Save</span>
+                <span>{isSaving ? 'Saving...' : 'Save'}</span>
               </button>
             </div>
           </div>
@@ -184,9 +269,11 @@ const Builder = ({ user, onLogout }) => {
             onSettingsChange={setSettings}
           />
         )}
+
         {activeTab === 'preview' && (
           <PreviewSection settings={settings} />
         )}
+
         {activeTab === 'export' && (
           <HtmlExporter settings={settings} />
         )}
@@ -207,19 +294,22 @@ const Builder = ({ user, onLogout }) => {
               onChange={(e) => setSectionName(e.target.value)}
               placeholder="Enter section name"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+              disabled={isSaving}
             />
             <div className="flex space-x-3">
               <button
                 onClick={() => setShowSaveModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                disabled={isSaving}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={saveSection}
-                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                disabled={isSaving}
+                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Save
+                {isSaving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </motion.div>

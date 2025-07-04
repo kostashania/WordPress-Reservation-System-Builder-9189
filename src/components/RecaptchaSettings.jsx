@@ -8,12 +8,16 @@ const { FiShield, FiEye, FiEyeOff, FiInfo, FiCheck, FiX, FiExternalLink } = FiIc
 const RecaptchaSettings = ({ settings, updateSetting }) => {
   const [showSiteKey, setShowSiteKey] = useState(false);
   const [showSecretKey, setShowSecretKey] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [testResult, setTestResult] = useState(null);
   const [isTesting, setIsTesting] = useState(false);
 
   const testRecaptcha = async () => {
     if (!settings.recaptchaSiteKey) {
-      setTestResult({ success: false, message: 'Please enter a site key first' });
+      setTestResult({
+        success: false,
+        message: 'Please enter a site key first'
+      });
       return;
     }
 
@@ -33,29 +37,29 @@ const RecaptchaSettings = ({ settings, updateSetting }) => {
       const script = document.createElement('script');
       script.src = `https://www.google.com/recaptcha/api.js?render=${settings.recaptchaSiteKey}`;
       script.async = true;
-      
+
       script.onload = () => {
         if (window.grecaptcha && window.grecaptcha.ready) {
           window.grecaptcha.ready(() => {
-            setTestResult({ 
-              success: true, 
-              message: 'reCAPTCHA loaded successfully! Site key is valid.' 
+            setTestResult({
+              success: true,
+              message: 'reCAPTCHA loaded successfully! Site key is valid.'
             });
             setIsTesting(false);
           });
         } else {
-          setTestResult({ 
-            success: false, 
-            message: 'reCAPTCHA script loaded but failed to initialize.' 
+          setTestResult({
+            success: false,
+            message: 'reCAPTCHA script loaded but failed to initialize.'
           });
           setIsTesting(false);
         }
       };
 
       script.onerror = () => {
-        setTestResult({ 
-          success: false, 
-          message: 'Failed to load reCAPTCHA. Please check your site key and internet connection.' 
+        setTestResult({
+          success: false,
+          message: 'Failed to load reCAPTCHA. Please check your site key and internet connection.'
         });
         setIsTesting(false);
       };
@@ -65,21 +69,27 @@ const RecaptchaSettings = ({ settings, updateSetting }) => {
       // Timeout after 10 seconds
       setTimeout(() => {
         if (isTesting) {
-          setTestResult({ 
-            success: false, 
-            message: 'Test timeout. Please check your site key and try again.' 
+          setTestResult({
+            success: false,
+            message: 'Test timeout. Please check your site key and try again.'
           });
           setIsTesting(false);
         }
       }, 10000);
 
     } catch (error) {
-      setTestResult({ 
-        success: false, 
-        message: 'Error testing reCAPTCHA: ' + error.message 
+      setTestResult({
+        success: false,
+        message: 'Error testing reCAPTCHA: ' + error.message
       });
       setIsTesting(false);
     }
+  };
+
+  const maskSensitiveData = (value, showLength = 4) => {
+    if (!value) return '';
+    if (value.length <= showLength) return '*'.repeat(value.length);
+    return value.substring(0, showLength) + '*'.repeat(Math.max(8, value.length - showLength));
   };
 
   return (
@@ -97,6 +107,19 @@ const RecaptchaSettings = ({ settings, updateSetting }) => {
             <p className="text-sm text-blue-800 mt-1">
               reCAPTCHA v3 runs in the background and provides a score (0.0-1.0) based on user interactions. 
               No user interaction required - it's completely invisible!
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Security Notice */}
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+        <div className="flex items-start space-x-3">
+          <SafeIcon icon={FiShield} className="h-5 w-5 text-amber-600 mt-0.5" />
+          <div>
+            <h4 className="font-medium text-amber-900">Security & Privacy</h4>
+            <p className="text-sm text-amber-800 mt-1">
+              API keys are automatically masked for security. Your reCAPTCHA credentials are stored locally and only used for verification.
             </p>
           </div>
         </div>
@@ -122,62 +145,120 @@ const RecaptchaSettings = ({ settings, updateSetting }) => {
             animate={{ opacity: 1, height: 'auto' }}
             className="space-y-4"
           >
-            {/* Site Key */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                reCAPTCHA Site Key (Public)
-              </label>
-              <div className="relative">
-                <input
-                  type={showSiteKey ? 'text' : 'password'}
-                  value={settings.recaptchaSiteKey || ''}
-                  onChange={(e) => updateSetting('recaptchaSiteKey', e.target.value)}
-                  placeholder="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
-                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+            {/* Keys Configuration */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-medium text-gray-800">API Keys Configuration</h4>
                 <button
-                  type="button"
-                  onClick={() => setShowSiteKey(!showSiteKey)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="text-sm text-blue-600 hover:text-blue-700 flex items-center space-x-1"
                 >
-                  <SafeIcon 
-                    icon={showSiteKey ? FiEyeOff : FiEye} 
-                    className="h-4 w-4 text-gray-400" 
-                  />
+                  <SafeIcon icon={showAdvanced ? FiEyeOff : FiEye} className="h-4 w-4" />
+                  <span>{showAdvanced ? 'Hide Keys' : 'Show Keys'}</span>
                 </button>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                This key is used in your HTML code and is visible to users
-              </p>
-            </div>
 
-            {/* Secret Key */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                reCAPTCHA Secret Key (Private)
-              </label>
-              <div className="relative">
-                <input
-                  type={showSecretKey ? 'text' : 'password'}
-                  value={settings.recaptchaSecretKey || ''}
-                  onChange={(e) => updateSetting('recaptchaSecretKey', e.target.value)}
-                  placeholder="6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe"
-                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowSecretKey(!showSecretKey)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                >
-                  <SafeIcon 
-                    icon={showSecretKey ? FiEyeOff : FiEye} 
-                    className="h-4 w-4 text-gray-400" 
-                  />
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                This key is used for server-side verification and should be kept private
-              </p>
+              {showAdvanced ? (
+                <div className="space-y-4">
+                  {/* Site Key */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      reCAPTCHA Site Key (Public)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showSiteKey ? 'text' : 'password'}
+                        value={settings.recaptchaSiteKey || ''}
+                        onChange={(e) => updateSetting('recaptchaSiteKey', e.target.value)}
+                        placeholder="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
+                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowSiteKey(!showSiteKey)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                      >
+                        <SafeIcon 
+                          icon={showSiteKey ? FiEyeOff : FiEye} 
+                          className="h-4 w-4 text-gray-400" 
+                        />
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      This key is used in your HTML code and is visible to users
+                    </p>
+                  </div>
+
+                  {/* Secret Key */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      reCAPTCHA Secret Key (Private)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showSecretKey ? 'text' : 'password'}
+                        value={settings.recaptchaSecretKey || ''}
+                        onChange={(e) => updateSetting('recaptchaSecretKey', e.target.value)}
+                        placeholder="6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe"
+                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowSecretKey(!showSecretKey)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                      >
+                        <SafeIcon 
+                          icon={showSecretKey ? FiEyeOff : FiEye} 
+                          className="h-4 w-4 text-gray-400" 
+                        />
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      This key is used for server-side verification and should be kept private
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                    <div className="flex items-center space-x-3">
+                      <SafeIcon icon={FiShield} className="h-5 w-5 text-green-500" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">Site Key (Public)</p>
+                        <p className="text-xs text-gray-500">
+                          {settings.recaptchaSiteKey ? maskSensitiveData(settings.recaptchaSiteKey, 8) : 'Not configured'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        settings.recaptchaSiteKey ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {settings.recaptchaSiteKey ? 'Configured' : 'Missing'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                    <div className="flex items-center space-x-3">
+                      <SafeIcon icon={FiShield} className="h-5 w-5 text-blue-500" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">Secret Key (Private)</p>
+                        <p className="text-xs text-gray-500">
+                          {settings.recaptchaSecretKey ? '••••••••••••••••' : 'Not configured'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        settings.recaptchaSecretKey ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {settings.recaptchaSecretKey ? 'Configured' : 'Missing'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Score Threshold */}
@@ -248,10 +329,10 @@ const RecaptchaSettings = ({ settings, updateSetting }) => {
         <ol className="text-sm text-yellow-700 space-y-1 list-decimal list-inside">
           <li>
             Go to{' '}
-            <a 
-              href="https://www.google.com/recaptcha/admin" 
-              target="_blank" 
-              rel="noopener noreferrer" 
+            <a
+              href="https://www.google.com/recaptcha/admin"
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-blue-600 hover:underline inline-flex items-center"
             >
               Google reCAPTCHA Admin Console
@@ -273,7 +354,9 @@ const RecaptchaSettings = ({ settings, updateSetting }) => {
         <div className="text-sm text-green-700 space-y-1">
           <p><strong>Site Key:</strong> 6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI</p>
           <p><strong>Secret Key:</strong> 6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe</p>
-          <p className="text-xs mt-2">These are Google's test keys and will always pass validation. Replace with your own keys for production.</p>
+          <p className="text-xs mt-2">
+            These are Google's test keys and will always pass validation. Replace with your own keys for production.
+          </p>
         </div>
       </div>
 
@@ -282,13 +365,12 @@ const RecaptchaSettings = ({ settings, updateSetting }) => {
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
           <h4 className="font-medium text-gray-800 mb-2">Server-side Verification</h4>
           <p className="text-sm text-gray-600 mb-3">
-            The exported HTML will include JavaScript to verify the reCAPTCHA token. 
-            For production use, implement server-side verification:
+            The exported HTML will include JavaScript to verify the reCAPTCHA token. For production use, implement server-side verification:
           </p>
           <div className="bg-gray-800 rounded p-3 overflow-x-auto">
             <code className="text-green-400 text-xs">
               {`// PHP Example
-$recaptcha_secret = '${settings.recaptchaSecretKey}';
+$recaptcha_secret = '${maskSensitiveData(settings.recaptchaSecretKey || '', 6)}';
 $recaptcha_response = $_POST['g-recaptcha-response'];
 $url = 'https://www.google.com/recaptcha/api/siteverify';
 $data = [
@@ -296,7 +378,10 @@ $data = [
   'response' => $recaptcha_response
 ];
 $response = json_decode(file_get_contents($url, false, stream_context_create([
-  'http' => ['method' => 'POST', 'content' => http_build_query($data)]
+  'http' => [
+    'method' => 'POST',
+    'content' => http_build_query($data)
+  ]
 ])));
 if ($response->success && $response->score >= ${settings.recaptchaThreshold || 0.5}) {
   // Valid submission
