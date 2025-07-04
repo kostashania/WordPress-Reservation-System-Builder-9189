@@ -138,59 +138,88 @@ const Builder = ({ user, onLogout }) => {
     setIsSaving(true);
     
     try {
+      const timestamp = new Date().toISOString();
+      const newId = id ? parseInt(id) : Date.now();
+      
       const sectionData = {
-        id: id ? parseInt(id) : Date.now(),
+        id: newId,
         name: sectionName,
         settings: settings,
         user_id: user.id,
-        created_at: id ? undefined : new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        userId: user.id, // Also add userId for localStorage compatibility
+        created_at: id ? undefined : timestamp,
+        updated_at: timestamp,
+        createdAt: id ? undefined : timestamp, // Also add createdAt for localStorage compatibility
+        updatedAt: timestamp
       };
 
+      console.log('Saving section:', sectionData);
+
       // Try Supabase first
-      if (supabase.from) {
-        if (id) {
-          const { error } = await supabase
-            .from('reservation_sections_db')
-            .update(sectionData)
-            .eq('id', parseInt(id));
-            
-          if (!error) {
-            setShowSaveModal(false);
-            setIsSaving(false);
-            navigate('/dashboard');
-            return;
+      if (supabase.from && typeof supabase.from === 'function') {
+        try {
+          if (id) {
+            const { data, error } = await supabase
+              .from('reservation_sections_db')
+              .update(sectionData)
+              .eq('id', parseInt(id))
+              .select();
+              
+            if (!error && data) {
+              console.log('Updated in Supabase:', data);
+              setShowSaveModal(false);
+              setIsSaving(false);
+              navigate('/dashboard');
+              return;
+            }
+          } else {
+            const { data, error } = await supabase
+              .from('reservation_sections_db')
+              .insert([sectionData])
+              .select();
+              
+            if (!error && data) {
+              console.log('Inserted in Supabase:', data);
+              setShowSaveModal(false);
+              setIsSaving(false);
+              navigate('/dashboard');
+              return;
+            }
           }
-        } else {
-          const { error } = await supabase
-            .from('reservation_sections_db')
-            .insert([sectionData]);
-            
-          if (!error) {
-            setShowSaveModal(false);
-            setIsSaving(false);
-            navigate('/dashboard');
-            return;
-          }
+          console.log('Supabase operation failed, falling back to localStorage');
+        } catch (supabaseError) {
+          console.log('Supabase error, falling back to localStorage:', supabaseError);
         }
       }
 
       // Fallback to localStorage
+      console.log('Using localStorage fallback');
       const savedSections = localStorage.getItem('reservationSections');
       const sections = savedSections ? JSON.parse(savedSections) : [];
 
       if (id) {
+        // Update existing section
         const index = sections.findIndex(s => s.id === parseInt(id));
         if (index !== -1) {
           sections[index] = sectionData;
+        } else {
+          sections.push(sectionData);
         }
       } else {
+        // Add new section
         sections.push(sectionData);
       }
 
       localStorage.setItem('reservationSections', JSON.stringify(sections));
+      console.log('Saved to localStorage:', sections);
+      
       setShowSaveModal(false);
       setIsSaving(false);
+      
+      // Show success message
+      alert(`Section "${sectionName}" saved successfully!`);
+      
+      // Navigate back to dashboard
       navigate('/dashboard');
       
     } catch (error) {
@@ -295,6 +324,7 @@ const Builder = ({ user, onLogout }) => {
               placeholder="Enter section name"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
               disabled={isSaving}
+              autoFocus
             />
             <div className="flex space-x-3">
               <button
@@ -306,7 +336,7 @@ const Builder = ({ user, onLogout }) => {
               </button>
               <button
                 onClick={saveSection}
-                disabled={isSaving}
+                disabled={isSaving || !sectionName.trim()}
                 className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? 'Saving...' : 'Save'}

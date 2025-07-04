@@ -5,72 +5,100 @@ import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
 import supabase from '../lib/supabase';
 
-const { FiPlus, FiEdit3, FiTrash2, FiCopy, FiDownload, FiUpload, FiLogOut, FiCalendar, FiEye, FiDatabase } = FiIcons;
+const { FiPlus, FiEdit3, FiTrash2, FiCopy, FiDownload, FiUpload, FiLogOut, FiCalendar, FiEye, FiDatabase, FiRefreshCw } = FiIcons;
 
 const Dashboard = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const [sections, setSections] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [dbStatus, setDbStatus] = useState('checking');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     checkDatabaseConnection();
     loadSections();
-  }, []);
+  }, [user]);
 
   const checkDatabaseConnection = async () => {
     try {
-      if (supabase.from) {
+      if (supabase.from && typeof supabase.from === 'function') {
         const { data, error } = await supabase.from('reservation_sections_db').select('count', { count: 'exact' });
         if (!error) {
           setDbStatus('connected');
+          console.log('Database connected');
         } else {
           setDbStatus('localStorage');
+          console.log('Database error, using localStorage:', error);
         }
       } else {
         setDbStatus('localStorage');
+        console.log('No database connection, using localStorage');
       }
     } catch (error) {
       setDbStatus('localStorage');
+      console.log('Database connection failed, using localStorage:', error);
     }
   };
 
   const loadSections = async () => {
+    setIsLoading(true);
     try {
-      if (supabase.from) {
-        const { data, error } = await supabase
-          .from('reservation_sections_db')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-          
-        if (data && !error) {
-          setSections(data);
-          return;
+      console.log('Loading sections for user:', user);
+      
+      // Try Supabase first
+      if (supabase.from && typeof supabase.from === 'function') {
+        try {
+          const { data, error } = await supabase
+            .from('reservation_sections_db')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+            
+          if (data && !error) {
+            console.log('Loaded from Supabase:', data);
+            setSections(data);
+            setIsLoading(false);
+            return;
+          }
+          console.log('Supabase query error:', error);
+        } catch (supabaseError) {
+          console.log('Supabase error:', supabaseError);
         }
       }
       
       // Fallback to localStorage
+      console.log('Loading from localStorage');
       const savedSections = localStorage.getItem('reservationSections');
       if (savedSections) {
         const allSections = JSON.parse(savedSections);
-        const userSections = allSections.filter(section => section.userId === user.id);
+        console.log('All sections from localStorage:', allSections);
+        
+        // Filter sections for current user using both user_id and userId
+        const userSections = allSections.filter(section => 
+          section.userId === user.id || section.user_id === user.id
+        );
+        console.log('User sections:', userSections);
         setSections(userSections);
+      } else {
+        console.log('No sections found in localStorage');
+        setSections([]);
       }
     } catch (error) {
       console.error('Error loading sections:', error);
-      // Fallback to localStorage
-      const savedSections = localStorage.getItem('reservationSections');
-      if (savedSections) {
-        setSections(JSON.parse(savedSections));
-      }
+      setSections([]);
     }
+    setIsLoading(false);
+  };
+
+  const refreshSections = () => {
+    loadSections();
   };
 
   const deleteSectionHandler = async (id) => {
     if (window.confirm('Are you sure you want to delete this section?')) {
       try {
-        if (supabase.from) {
+        // Try Supabase first
+        if (supabase.from && typeof supabase.from === 'function') {
           const { error } = await supabase
             .from('reservation_sections_db')
             .delete()
@@ -87,8 +115,8 @@ const Dashboard = ({ user, onLogout }) => {
         if (savedSections) {
           const allSections = JSON.parse(savedSections);
           const updatedSections = allSections.filter(section => section.id !== id);
-          setSections(sections.filter(section => section.id !== id));
           localStorage.setItem('reservationSections', JSON.stringify(updatedSections));
+          setSections(sections.filter(section => section.id !== id));
         }
       } catch (error) {
         console.error('Error deleting section:', error);
@@ -102,16 +130,21 @@ const Dashboard = ({ user, onLogout }) => {
         ...section,
         id: Date.now(),
         name: `${section.name} (Copy)`,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        user_id: user.id,
+        userId: user.id
       };
 
-      if (supabase.from) {
+      // Try Supabase first
+      if (supabase.from && typeof supabase.from === 'function') {
         const { data, error } = await supabase
           .from('reservation_sections_db')
-          .insert([newSection]);
+          .insert([newSection])
+          .select();
           
-        if (!error) {
-          setSections([newSection, ...sections]);
+        if (!error && data) {
+          setSections([data[0], ...sections]);
           return;
         }
       }
@@ -120,8 +153,8 @@ const Dashboard = ({ user, onLogout }) => {
       const savedSections = localStorage.getItem('reservationSections');
       const allSections = savedSections ? JSON.parse(savedSections) : [];
       allSections.push(newSection);
-      setSections([newSection, ...sections]);
       localStorage.setItem('reservationSections', JSON.stringify(allSections));
+      setSections([newSection, ...sections]);
     } catch (error) {
       console.error('Error duplicating section:', error);
     }
@@ -149,16 +182,20 @@ const Dashboard = ({ user, onLogout }) => {
             id: Date.now(),
             name: `${importedSection.name} (Imported)`,
             created_at: new Date().toISOString(),
-            user_id: user.id
+            createdAt: new Date().toISOString(),
+            user_id: user.id,
+            userId: user.id
           };
 
-          if (supabase.from) {
+          // Try Supabase first
+          if (supabase.from && typeof supabase.from === 'function') {
             const { data, error } = await supabase
               .from('reservation_sections_db')
-              .insert([newSection]);
+              .insert([newSection])
+              .select();
               
-            if (!error) {
-              setSections([newSection, ...sections]);
+            if (!error && data) {
+              setSections([data[0], ...sections]);
               return;
             }
           }
@@ -167,14 +204,16 @@ const Dashboard = ({ user, onLogout }) => {
           const savedSections = localStorage.getItem('reservationSections');
           const allSections = savedSections ? JSON.parse(savedSections) : [];
           allSections.push(newSection);
-          setSections([newSection, ...sections]);
           localStorage.setItem('reservationSections', JSON.stringify(allSections));
+          setSections([newSection, ...sections]);
         } catch (error) {
           alert('Error importing section. Please check the file format.');
         }
       };
       reader.readAsText(file);
     }
+    // Reset file input
+    event.target.value = '';
   };
 
   const filteredSections = sections.filter(section =>
@@ -193,14 +232,24 @@ const Dashboard = ({ user, onLogout }) => {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p className="text-gray-600 mt-1">Welcome back, {user.username}!</p>
-            <div className="flex items-center space-x-2 mt-2">
-              <SafeIcon icon={FiDatabase} className="h-4 w-4 text-gray-500" />
-              <span className="text-sm text-gray-500">
-                Database: 
-                <span className={`ml-1 ${dbStatus === 'connected' ? 'text-green-600' : 'text-yellow-600'}`}>
-                  {dbStatus === 'connected' ? 'Supabase Connected' : 'LocalStorage Fallback'}
+            <div className="flex items-center space-x-4 mt-2">
+              <div className="flex items-center space-x-2">
+                <SafeIcon icon={FiDatabase} className="h-4 w-4 text-gray-500" />
+                <span className="text-sm text-gray-500">
+                  Database: 
+                  <span className={`ml-1 ${dbStatus === 'connected' ? 'text-green-600' : 'text-yellow-600'}`}>
+                    {dbStatus === 'connected' ? 'Supabase Connected' : 'LocalStorage Fallback'}
+                  </span>
                 </span>
-              </span>
+              </div>
+              <button
+                onClick={refreshSections}
+                className="flex items-center space-x-1 px-2 py-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                title="Refresh sections"
+              >
+                <SafeIcon icon={FiRefreshCw} className="h-3 w-3" />
+                <span>Refresh</span>
+              </button>
             </div>
           </div>
           <button
@@ -251,109 +300,137 @@ const Dashboard = ({ user, onLogout }) => {
           </div>
         </motion.div>
 
-        {/* Sections Grid */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
-          {filteredSections.length === 0 ? (
-            <div className="col-span-full text-center py-12">
-              <SafeIcon icon={FiCalendar} className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No sections yet</h3>
-              <p className="text-gray-600 mb-4">Create your first table reservation section to get started.</p>
-              <button
-                onClick={() => navigate('/builder')}
-                className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                <SafeIcon icon={FiPlus} className="h-4 w-4" />
-                <span>Create Section</span>
-              </button>
-            </div>
-          ) : (
-            filteredSections.map((section) => (
-              <motion.div
-                key={section.id}
-                layout
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                whileHover={{ y: -5 }}
-                className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300"
-              >
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-1">{section.name}</h3>
-                      <p className="text-sm text-gray-500">
-                        Created {new Date(section.created_at).toLocaleDateString()}
-                      </p>
+        {/* Loading State */}
+        {isLoading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading sections...</p>
+          </div>
+        ) : (
+          /* Sections Grid */
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
+            {filteredSections.length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <SafeIcon icon={FiCalendar} className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  {searchTerm ? 'No matching sections' : 'No sections yet'}
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  {searchTerm 
+                    ? 'Try adjusting your search terms.' 
+                    : 'Create your first table reservation section to get started.'
+                  }
+                </p>
+                {!searchTerm && (
+                  <button
+                    onClick={() => navigate('/builder')}
+                    className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                  >
+                    <SafeIcon icon={FiPlus} className="h-4 w-4" />
+                    <span>Create Section</span>
+                  </button>
+                )}
+              </div>
+            ) : (
+              filteredSections.map((section) => (
+                <motion.div
+                  key={section.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  whileHover={{ y: -5 }}
+                  className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300"
+                >
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">{section.name}</h3>
+                        <p className="text-sm text-gray-500">
+                          Created {new Date(section.created_at || section.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="flex space-x-1">
+                        <button
+                          onClick={() => navigate(`/builder/${section.id}`)}
+                          className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Preview"
+                        >
+                          <SafeIcon icon={FiEye} className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => navigate(`/builder/${section.id}`)}
+                          className="p-2 text-green-500 hover:bg-green-50 rounded-lg transition-colors"
+                          title="Edit"
+                        >
+                          <SafeIcon icon={FiEdit3} className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex space-x-1">
+
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                        {section.settings?.buttonStyle || 'Default'}
+                      </span>
+                      <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                        {section.settings?.backgroundType || 'Color'}
+                      </span>
+                      {section.settings?.enableEmailNotifications && (
+                        <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+                          Email Enabled
+                        </span>
+                      )}
+                      {section.settings?.enableRecaptcha && (
+                        <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">
+                          reCAPTCHA
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex space-x-2">
                       <button
-                        onClick={() => navigate(`/builder/${section.id}`)}
-                        className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Preview"
+                        onClick={() => duplicateSection(section)}
+                        className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
                       >
-                        <SafeIcon icon={FiEye} className="h-4 w-4" />
+                        <SafeIcon icon={FiCopy} className="h-4 w-4" />
+                        <span>Copy</span>
                       </button>
                       <button
-                        onClick={() => navigate(`/builder/${section.id}`)}
-                        className="p-2 text-green-500 hover:bg-green-50 rounded-lg transition-colors"
-                        title="Edit"
+                        onClick={() => exportSection(section)}
+                        className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm"
                       >
-                        <SafeIcon icon={FiEdit3} className="h-4 w-4" />
+                        <SafeIcon icon={FiDownload} className="h-4 w-4" />
+                        <span>Export</span>
+                      </button>
+                      <button
+                        onClick={() => deleteSectionHandler(section.id)}
+                        className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm"
+                      >
+                        <SafeIcon icon={FiTrash2} className="h-4 w-4" />
+                        <span>Delete</span>
                       </button>
                     </div>
                   </div>
+                </motion.div>
+              ))
+            )}
+          </motion.div>
+        )}
 
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                      {section.settings?.buttonStyle || 'Default'}
-                    </span>
-                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                      {section.settings?.backgroundType || 'Color'}
-                    </span>
-                    {section.settings?.enableEmailNotifications && (
-                      <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
-                        Email Enabled
-                      </span>
-                    )}
-                    {section.settings?.enableRecaptcha && (
-                      <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">
-                        reCAPTCHA
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => duplicateSection(section)}
-                      className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
-                    >
-                      <SafeIcon icon={FiCopy} className="h-4 w-4" />
-                      <span>Copy</span>
-                    </button>
-                    <button
-                      onClick={() => exportSection(section)}
-                      className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm"
-                    >
-                      <SafeIcon icon={FiDownload} className="h-4 w-4" />
-                      <span>Export</span>
-                    </button>
-                    <button
-                      onClick={() => deleteSectionHandler(section.id)}
-                      className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm"
-                    >
-                      <SafeIcon icon={FiTrash2} className="h-4 w-4" />
-                      <span>Delete</span>
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            ))
-          )}
-        </motion.div>
+        {/* Debug Info (only in development) */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-8 p-4 bg-gray-100 rounded-lg">
+            <h4 className="font-semibold mb-2">Debug Info:</h4>
+            <p>User ID: {user.id}</p>
+            <p>Total sections: {sections.length}</p>
+            <p>Database status: {dbStatus}</p>
+            <p>Sections: {JSON.stringify(sections.map(s => ({ id: s.id, name: s.name, userId: s.userId || s.user_id })))}</p>
+          </div>
+        )}
       </div>
     </div>
   );
