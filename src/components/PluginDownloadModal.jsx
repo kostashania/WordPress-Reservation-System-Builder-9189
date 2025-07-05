@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import * as FiIcons from 'react-icons/fi'
 import SafeIcon from '../common/SafeIcon'
 import { downloadPlugin } from '../utils/pluginGenerator'
+import supabase from '../lib/supabase'
 
 const { FiDownload, FiX, FiEye, FiEyeOff, FiSettings, FiMail, FiShield } = FiIcons
 
@@ -45,8 +46,12 @@ const PluginDownloadModal = ({ section, onClose, isOpen }) => {
     try {
       await downloadPlugin(section, userSettings)
       
-      // Track download in Supabase
-      await trackPluginDownload(section.id, userSettings)
+      // Track download in Supabase (optional - won't fail if it doesn't work)
+      try {
+        await trackPluginDownload(section.id, userSettings)
+      } catch (trackingError) {
+        console.warn('Could not track download:', trackingError)
+      }
       
       onClose()
     } catch (error) {
@@ -75,6 +80,7 @@ const PluginDownloadModal = ({ section, onClose, isOpen }) => {
       if (error) throw error
     } catch (err) {
       console.error('Error tracking download:', err)
+      // Don't throw - tracking is optional
     }
   }
 
@@ -102,7 +108,7 @@ const PluginDownloadModal = ({ section, onClose, isOpen }) => {
             </div>
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Download WordPress Plugin</h2>
-              <p className="text-sm text-gray-600">{section.name}</p>
+              <p className="text-sm text-gray-600">{section?.name}</p>
             </div>
           </div>
           <button

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import supabase from '../lib/supabase'
-import bcrypt from 'bcryptjs'
 
 export const useSupabaseAuth = () => {
   const [user, setUser] = useState(null)
@@ -8,46 +7,159 @@ export const useSupabaseAuth = () => {
   const [session, setSession] = useState(null)
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session?.user) {
-        loadUserProfile(session.user.id)
-      } else {
+    let mounted = true
+    let timeoutId
+
+    // Set a maximum timeout for loading
+    const maxLoadingTime = setTimeout(() => {
+      if (mounted) {
+        console.warn('Auth loading timeout - proceeding without auth')
         setLoading(false)
       }
-    })
+    }, 5000) // 5 seconds max
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+    // Get initial session with timeout
+    const getInitialSession = async () => {
+      try {
+        console.log('Getting initial session...')
+        
+        // Use Promise.race to add timeout
+        const sessionPromise = supabase.auth.getSession()
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session timeout')), 3000)
+        )
+
+        const { data: { session }, error } = await Promise.race([
+          sessionPromise,
+          timeoutPromise
+        ])
+        
+        if (!mounted) return
+        
+        if (error) {
+          console.error('Error getting session:', error)
+          setLoading(false)
+          return
+        }
+
+        console.log('Session retrieved:', session ? 'Found' : 'None')
         setSession(session)
+        
         if (session?.user) {
           await loadUserProfile(session.user.id)
         } else {
-          setUser(null)
+          setLoading(false)
         }
-        setLoading(false)
+      } catch (error) {
+        console.error('Error in getInitialSession:', error)
+        if (mounted) {
+          // Create a fallback offline mode
+          setLoading(false)
+        }
       }
-    )
+    }
 
-    return () => subscription.unsubscribe()
+    getInitialSession()
+
+    // Listen for auth changes with timeout protection
+    let authSubscription
+    try {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          if (!mounted) return
+          
+          console.log('Auth state changed:', event)
+          setSession(session)
+          
+          if (session?.user) {
+            await loadUserProfile(session.user.id)
+          } else {
+            setUser(null)
+            setLoading(false)
+          }
+        }
+      )
+      authSubscription = subscription
+    } catch (error) {
+      console.error('Error setting up auth listener:', error)
+      setLoading(false)
+    }
+
+    return () => {
+      mounted = false
+      clearTimeout(maxLoadingTime)
+      if (authSubscription) {
+        authSubscription.unsubscribe()
+      }
+    }
   }, [])
 
   const loadUserProfile = async (userId) => {
     try {
-      const { data, error } = await supabase
+      console.log('Loading user profile for:', userId)
+      
+      // Add timeout for profile loading
+      const profilePromise = supabase
         .from('table_reservation.users')
         .select('*')
         .eq('id', userId)
-        .single()
+        .maybeSingle()
 
-      if (error) throw error
-      setUser(data)
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile timeout')), 2000)
+      )
+
+      const { data, error } = await Promise.race([
+        profilePromise,
+        timeoutPromise
+      ])
+
+      if (error && error.code !== 'PGRST116') {
+        console.warn('Profile loading failed, using auth data:', error)
+        throw error
+      }
+
+      if (data) {
+        console.log('User profile loaded from database')
+        setUser(data)
+      } else {
+        console.log('Creating basic profile from auth data')
+        await createBasicProfile(userId)
+      }
     } catch (error) {
-      console.error('Error loading user profile:', error)
+      console.warn('Profile loading failed, creating fallback:', error)
+      await createBasicProfile(userId)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const createBasicProfile = async (userId) => {
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      
+      if (authUser) {
+        const basicUser = {
+          id: authUser.id,
+          email: authUser.email,
+          username: authUser.user_metadata?.username || 
+                   authUser.email?.split('@')[0] || 
+                   `user_${Date.now()}`,
+          role: 'user'
+        }
+        
+        console.log('Created basic user profile:', basicUser)
+        setUser(basicUser)
+      }
+    } catch (error) {
+      console.error('Failed to create basic profile:', error)
+      // Even if this fails, we can still work in offline mode
+      setUser({
+        id: 'offline_user',
+        email: 'offline@example.com',
+        username: 'Offline User',
+        role: 'user'
+      })
     }
   }
 
@@ -55,19 +167,10 @@ export const useSupabaseAuth = () => {
     try {
       const { email, username, password } = userData
       
-      // Check if user already exists in our custom users table
-      const { data: existingUser } = await supabase
-        .from('table_reservation.users')
-        .select('id')
-        .or(`email.eq.${email},username.eq.${username}`)
-        .single()
+      console.log('Signing up user:', { email, username })
 
-      if (existingUser) {
-        throw new Error('Username or email already exists')
-      }
-
-      // Create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // Create auth user with timeout
+      const signUpPromise = supabase.auth.signUp({
         email,
         password,
         options: {
@@ -78,27 +181,41 @@ export const useSupabaseAuth = () => {
         }
       })
 
-      if (authError) throw authError
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Signup timeout')), 10000)
+      )
 
-      // Create user profile in our custom table
-      const passwordHash = await bcrypt.hash(password, 10)
-      
-      const { data: profileData, error: profileError } = await supabase
-        .from('table_reservation.users')
-        .insert({
-          id: authData.user.id,
-          email,
-          username,
-          password_hash: passwordHash,
-          role: 'user'
-        })
-        .select()
-        .single()
+      const { data: authData, error: authError } = await Promise.race([
+        signUpPromise,
+        timeoutPromise
+      ])
 
-      if (profileError) throw profileError
+      if (authError) {
+        console.error('Auth signup error:', authError)
+        throw authError
+      }
 
-      return { user: profileData, session: authData.session }
+      if (!authData.user) {
+        throw new Error('Failed to create user account')
+      }
+
+      // Try to create user profile (non-blocking)
+      try {
+        await supabase
+          .from('table_reservation.users')
+          .insert({
+            id: authData.user.id,
+            email,
+            username,
+            role: 'user'
+          })
+      } catch (profileError) {
+        console.warn('Could not create user profile, continuing:', profileError)
+      }
+
+      return { user: authData.user, session: authData.session }
     } catch (error) {
+      console.error('Signup error:', error)
       throw error
     }
   }
@@ -107,43 +224,70 @@ export const useSupabaseAuth = () => {
     try {
       const { username, password } = credentials
       
-      // First, get user by username to find email
-      const { data: userData, error: userError } = await supabase
-        .from('table_reservation.users')
-        .select('email, password_hash, is_active')
-        .eq('username', username)
-        .single()
+      console.log('Signing in user:', username)
 
-      if (userError || !userData) {
-        throw new Error('Invalid username or password')
+      let email = username
+      
+      // Try to find email by username (with timeout)
+      if (!username.includes('@')) {
+        try {
+          const lookupPromise = supabase
+            .from('table_reservation.users')
+            .select('email')
+            .eq('username', username)
+            .maybeSingle()
+
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Lookup timeout')), 1000)
+          )
+
+          const { data: userData } = await Promise.race([
+            lookupPromise,
+            timeoutPromise
+          ])
+
+          if (userData?.email) {
+            email = userData.email
+          }
+        } catch (error) {
+          console.warn('Username lookup failed, using as email:', error)
+          email = username
+        }
       }
 
-      if (!userData.is_active) {
-        throw new Error('Account is deactivated')
-      }
-
-      // Verify password
-      const passwordValid = await bcrypt.compare(password, userData.password_hash)
-      if (!passwordValid) {
-        throw new Error('Invalid username or password')
-      }
-
-      // Sign in with Supabase Auth using email
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: userData.email,
+      // Sign in with timeout
+      const signInPromise = supabase.auth.signInWithPassword({
+        email,
         password
       })
 
-      if (error) throw error
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Sign in timeout')), 10000)
+      )
 
-      // Update last login
-      await supabase
-        .from('table_reservation.users')
-        .update({ last_login: new Date().toISOString() })
-        .eq('email', userData.email)
+      const { data, error } = await Promise.race([
+        signInPromise,
+        timeoutPromise
+      ])
+
+      if (error) {
+        console.error('Sign in error:', error)
+        throw new Error('Invalid username or password')
+      }
+
+      // Update last login (non-blocking)
+      try {
+        await supabase
+          .from('table_reservation.users')
+          .update({ last_login: new Date().toISOString() })
+          .eq('id', data.user.id)
+      } catch (error) {
+        console.warn('Could not update last login:', error)
+      }
 
       return data
     } catch (error) {
+      console.error('Sign in error:', error)
       throw error
     }
   }
@@ -155,6 +299,10 @@ export const useSupabaseAuth = () => {
       setUser(null)
       setSession(null)
     } catch (error) {
+      console.error('Sign out error:', error)
+      // Force local logout even if server logout fails
+      setUser(null)
+      setSession(null)
       throw error
     }
   }
@@ -170,10 +318,17 @@ export const useSupabaseAuth = () => {
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.warn('Could not update profile in database:', error)
+        // Update local state anyway
+        setUser({ ...user, ...updates })
+        return { ...user, ...updates }
+      }
+
       setUser(data)
       return data
     } catch (error) {
+      console.error('Update profile error:', error)
       throw error
     }
   }
