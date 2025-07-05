@@ -1,16 +1,15 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import React, {useState} from 'react'
+import {useNavigate} from 'react-router-dom'
+import {motion} from 'framer-motion'
 import * as FiIcons from 'react-icons/fi'
 import SafeIcon from '../../common/SafeIcon'
-import { useSupabaseAuth } from '../../hooks/useSupabaseAuth'
+import {useSupabaseAuth} from '../../hooks/useSupabaseAuth'
 
-const { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiArrowLeft } = FiIcons
+const {FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiArrowLeft} = FiIcons
 
 const Register = () => {
   const navigate = useNavigate()
-  const { signUp, loading } = useSupabaseAuth()
-  
+  const {signUp, loading} = useSupabaseAuth()
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -59,16 +58,16 @@ const Register = () => {
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        initial={{opacity: 0, y: 20}}
+        animate={{opacity: 1, y: 0}}
+        transition={{duration: 0.5}}
         className="max-w-md w-full space-y-8"
       >
         <div>
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+            initial={{scale: 0}}
+            animate={{scale: 1}}
+            transition={{delay: 0.2, type: "spring", stiffness: 200}}
             className="mx-auto h-16 w-16 bg-gradient-to-r from-green-500 to-blue-600 rounded-full flex items-center justify-center"
           >
             <SafeIcon icon={FiUser} className="h-8 w-8 text-white" />
@@ -82,9 +81,9 @@ const Register = () => {
         </div>
 
         <motion.form
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
+          initial={{opacity: 0}}
+          animate={{opacity: 1}}
+          transition={{delay: 0.3}}
           className="mt-8 space-y-6"
           onSubmit={handleSubmit}
         >
@@ -148,9 +147,9 @@ const Register = () => {
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  <SafeIcon 
-                    icon={showPassword ? FiEyeOff : FiEye} 
-                    className="h-5 w-5 text-gray-400 hover:text-gray-600 transition-colors" 
+                  <SafeIcon
+                    icon={showPassword ? FiEyeOff : FiEye}
+                    className="h-5 w-5 text-gray-400 hover:text-gray-600 transition-colors"
                   />
                 </button>
               </div>
@@ -175,9 +174,9 @@ const Register = () => {
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  <SafeIcon 
-                    icon={showConfirmPassword ? FiEyeOff : FiEye} 
-                    className="h-5 w-5 text-gray-400 hover:text-gray-600 transition-colors" 
+                  <SafeIcon
+                    icon={showConfirmPassword ? FiEyeOff : FiEye}
+                    className="h-5 w-5 text-gray-400 hover:text-gray-600 transition-colors"
                   />
                 </button>
               </div>
@@ -185,8 +184,8 @@ const Register = () => {
           </div>
 
           <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            whileHover={{scale: 1.02}}
+            whileTap={{scale: 0.98}}
             type="submit"
             disabled={isLoading || loading}
             className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
@@ -209,6 +208,18 @@ const Register = () => {
             </button>
           </div>
         </motion.form>
+
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <h4 className="font-semibold text-green-800 mb-2">What You Get:</h4>
+          <ul className="text-green-700 text-sm space-y-1 list-disc list-inside">
+            <li>Create unlimited table reservation forms</li>
+            <li>Download WordPress plugins instantly</li>
+            <li>Advanced customization options</li>
+            <li>Cloud storage for your designs</li>
+            <li>reCAPTCHA v3 spam protection</li>
+            <li>Email notification system</li>
+          </ul>
+        </div>
       </motion.div>
     </div>
   )

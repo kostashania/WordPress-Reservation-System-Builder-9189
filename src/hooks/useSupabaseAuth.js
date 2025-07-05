@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import {useState, useEffect} from 'react'
 import supabase from '../lib/supabase'
 
 export const useSupabaseAuth = () => {
@@ -8,7 +8,29 @@ export const useSupabaseAuth = () => {
 
   useEffect(() => {
     let mounted = true
-    let timeoutId
+
+    // Check for stored user first (for demo admins)
+    const checkStoredUser = () => {
+      try {
+        const storedUser = localStorage.getItem('currentUser')
+        if (storedUser) {
+          const userData = JSON.parse(storedUser)
+          if (mounted) {
+            setUser(userData)
+            setLoading(false)
+            return true
+          }
+        }
+      } catch (error) {
+        console.error('Error checking stored user:', error)
+      }
+      return false
+    }
+
+    // Check stored user first
+    if (checkStoredUser()) {
+      return
+    }
 
     // Set a maximum timeout for loading
     const maxLoadingTime = setTimeout(() => {
@@ -22,20 +44,19 @@ export const useSupabaseAuth = () => {
     const getInitialSession = async () => {
       try {
         console.log('Getting initial session...')
-        
         // Use Promise.race to add timeout
         const sessionPromise = supabase.auth.getSession()
-        const timeoutPromise = new Promise((_, reject) => 
+        const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Session timeout')), 3000)
         )
 
-        const { data: { session }, error } = await Promise.race([
+        const {data: {session}, error} = await Promise.race([
           sessionPromise,
           timeoutPromise
         ])
-        
+
         if (!mounted) return
-        
+
         if (error) {
           console.error('Error getting session:', error)
           setLoading(false)
@@ -44,7 +65,6 @@ export const useSupabaseAuth = () => {
 
         console.log('Session retrieved:', session ? 'Found' : 'None')
         setSession(session)
-        
         if (session?.user) {
           await loadUserProfile(session.user.id)
         } else {
@@ -64,13 +84,11 @@ export const useSupabaseAuth = () => {
     // Listen for auth changes with timeout protection
     let authSubscription
     try {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      const {data: {subscription}} = supabase.auth.onAuthStateChange(
         async (event, session) => {
           if (!mounted) return
-          
           console.log('Auth state changed:', event)
           setSession(session)
-          
           if (session?.user) {
             await loadUserProfile(session.user.id)
           } else {
@@ -97,7 +115,6 @@ export const useSupabaseAuth = () => {
   const loadUserProfile = async (userId) => {
     try {
       console.log('Loading user profile for:', userId)
-      
       // Add timeout for profile loading
       const profilePromise = supabase
         .from('table_reservation.users')
@@ -105,11 +122,11 @@ export const useSupabaseAuth = () => {
         .eq('id', userId)
         .maybeSingle()
 
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Profile timeout')), 2000)
       )
 
-      const { data, error } = await Promise.race([
+      const {data, error} = await Promise.race([
         profilePromise,
         timeoutPromise
       ])
@@ -136,18 +153,14 @@ export const useSupabaseAuth = () => {
 
   const createBasicProfile = async (userId) => {
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      
+      const {data: {user: authUser}} = await supabase.auth.getUser()
       if (authUser) {
         const basicUser = {
           id: authUser.id,
           email: authUser.email,
-          username: authUser.user_metadata?.username || 
-                   authUser.email?.split('@')[0] || 
-                   `user_${Date.now()}`,
+          username: authUser.user_metadata?.username || authUser.email?.split('@')[0] || `user_${Date.now()}`,
           role: 'user'
         }
-        
         console.log('Created basic user profile:', basicUser)
         setUser(basicUser)
       }
@@ -165,9 +178,8 @@ export const useSupabaseAuth = () => {
 
   const signUp = async (userData) => {
     try {
-      const { email, username, password } = userData
-      
-      console.log('Signing up user:', { email, username })
+      const {email, username, password} = userData
+      console.log('Signing up user:', {email, username})
 
       // Create auth user with timeout
       const signUpPromise = supabase.auth.signUp({
@@ -181,11 +193,11 @@ export const useSupabaseAuth = () => {
         }
       })
 
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Signup timeout')), 10000)
       )
 
-      const { data: authData, error: authError } = await Promise.race([
+      const {data: authData, error: authError} = await Promise.race([
         signUpPromise,
         timeoutPromise
       ])
@@ -213,7 +225,7 @@ export const useSupabaseAuth = () => {
         console.warn('Could not create user profile, continuing:', profileError)
       }
 
-      return { user: authData.user, session: authData.session }
+      return {user: authData.user, session: authData.session}
     } catch (error) {
       console.error('Signup error:', error)
       throw error
@@ -222,12 +234,10 @@ export const useSupabaseAuth = () => {
 
   const signIn = async (credentials) => {
     try {
-      const { username, password } = credentials
-      
+      const {username, password} = credentials
       console.log('Signing in user:', username)
 
       let email = username
-      
       // Try to find email by username (with timeout)
       if (!username.includes('@')) {
         try {
@@ -237,11 +247,11 @@ export const useSupabaseAuth = () => {
             .eq('username', username)
             .maybeSingle()
 
-          const timeoutPromise = new Promise((_, reject) => 
+          const timeoutPromise = new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Lookup timeout')), 1000)
           )
 
-          const { data: userData } = await Promise.race([
+          const {data: userData} = await Promise.race([
             lookupPromise,
             timeoutPromise
           ])
@@ -261,11 +271,11 @@ export const useSupabaseAuth = () => {
         password
       })
 
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Sign in timeout')), 10000)
       )
 
-      const { data, error } = await Promise.race([
+      const {data, error} = await Promise.race([
         signInPromise,
         timeoutPromise
       ])
@@ -279,7 +289,7 @@ export const useSupabaseAuth = () => {
       try {
         await supabase
           .from('table_reservation.users')
-          .update({ last_login: new Date().toISOString() })
+          .update({last_login: new Date().toISOString()})
           .eq('id', data.user.id)
       } catch (error) {
         console.warn('Could not update last login:', error)
@@ -294,13 +304,18 @@ export const useSupabaseAuth = () => {
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut()
+      // Clear stored user first
+      localStorage.removeItem('currentUser')
+      
+      const {error} = await supabase.auth.signOut()
       if (error) throw error
+      
       setUser(null)
       setSession(null)
     } catch (error) {
       console.error('Sign out error:', error)
       // Force local logout even if server logout fails
+      localStorage.removeItem('currentUser')
       setUser(null)
       setSession(null)
       throw error
@@ -311,7 +326,7 @@ export const useSupabaseAuth = () => {
     try {
       if (!user?.id) throw new Error('No user logged in')
 
-      const { data, error } = await supabase
+      const {data, error} = await supabase
         .from('table_reservation.users')
         .update(updates)
         .eq('id', user.id)
@@ -321,8 +336,8 @@ export const useSupabaseAuth = () => {
       if (error) {
         console.warn('Could not update profile in database:', error)
         // Update local state anyway
-        setUser({ ...user, ...updates })
-        return { ...user, ...updates }
+        setUser({...user, ...updates})
+        return {...user, ...updates}
       }
 
       setUser(data)

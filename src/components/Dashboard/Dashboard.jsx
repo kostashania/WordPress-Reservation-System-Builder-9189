@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import React, {useState, useEffect} from 'react'
+import {useNavigate} from 'react-router-dom'
+import {motion} from 'framer-motion'
 import * as FiIcons from 'react-icons/fi'
 import SafeIcon from '../../common/SafeIcon'
-import { useSupabaseAuth } from '../../hooks/useSupabaseAuth'
-import { useSupabaseSections } from '../../hooks/useSupabaseSections'
+import {useSupabaseAuth} from '../../hooks/useSupabaseAuth'
+import {useSupabaseSections} from '../../hooks/useSupabaseSections'
 import PluginDownloadModal from '../PluginDownloadModal'
 
-const { FiPlus, FiEdit3, FiTrash2, FiCopy, FiDownload, FiLogOut, FiEye, FiCloud } = FiIcons
+const {FiPlus, FiEdit3, FiTrash2, FiCopy, FiDownload, FiLogOut, FiEye, FiCloud} = FiIcons
 
 const Dashboard = () => {
   const navigate = useNavigate()
-  const { user, signOut } = useSupabaseAuth()
-  const { sections, loading, deleteSection, duplicateSection } = useSupabaseSections(user?.id)
+  const {user, signOut} = useSupabaseAuth()
+  const {sections, loading, deleteSection, duplicateSection} = useSupabaseSections(user?.id)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedSection, setSelectedSection] = useState(null)
   const [showDownloadModal, setShowDownloadModal] = useState(false)
@@ -79,8 +79,8 @@ const Dashboard = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{opacity: 0, y: -20}}
+          animate={{opacity: 1, y: 0}}
           className="flex justify-between items-center mb-8"
         >
           <div>
@@ -102,9 +102,9 @@ const Dashboard = () => {
 
         {/* Actions Bar */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          initial={{opacity: 0, y: 20}}
+          animate={{opacity: 1, y: 0}}
+          transition={{delay: 0.1}}
           className="flex flex-col sm:flex-row gap-4 mb-8"
         >
           <button
@@ -114,7 +114,6 @@ const Dashboard = () => {
             <SafeIcon icon={FiPlus} className="h-5 w-5" />
             <span>Create New Section</span>
           </button>
-
           <div className="flex-1">
             <input
               type="text"
@@ -128,9 +127,9 @@ const Dashboard = () => {
 
         {/* Sections Grid */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
+          initial={{opacity: 0}}
+          animate={{opacity: 1}}
+          transition={{delay: 0.2}}
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
           {filteredSections.length === 0 ? (
@@ -160,9 +159,9 @@ const Dashboard = () => {
               <motion.div
                 key={section.id}
                 layout
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                whileHover={{ y: -5 }}
+                initial={{opacity: 0, scale: 0.9}}
+                animate={{opacity: 1, scale: 1}}
+                whileHover={{y: -5}}
                 className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300"
               >
                 <div className="p-6">
