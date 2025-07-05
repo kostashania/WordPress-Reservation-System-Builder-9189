@@ -112,6 +112,7 @@ const Login = () => {
                   id="username"
                   name="username"
                   type="text"
+                  autoComplete="username"
                   required
                   value={formData.username}
                   onChange={handleChange}
@@ -131,6 +132,7 @@ const Login = () => {
                   id="password"
                   name="password"
                   type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
                   required
                   value={formData.password}
                   onChange={handleChange}
@@ -141,6 +143,7 @@ const Login = () => {
                   type="button"
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   <SafeIcon
                     icon={showPassword ? FiEyeOff : FiEye}

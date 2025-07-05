@@ -95,13 +95,16 @@ const Register = () => {
 
           <div className="space-y-4">
             <div>
+              <label htmlFor="username" className="sr-only">Username</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <SafeIcon icon={FiUser} className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
+                  id="username"
                   name="username"
                   type="text"
+                  autoComplete="username"
                   required
                   value={formData.username}
                   onChange={handleChange}
@@ -112,13 +115,16 @@ const Register = () => {
             </div>
 
             <div>
+              <label htmlFor="email" className="sr-only">Email address</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <SafeIcon icon={FiMail} className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
+                  id="email"
                   name="email"
                   type="email"
+                  autoComplete="email"
                   required
                   value={formData.email}
                   onChange={handleChange}
@@ -129,13 +135,16 @@ const Register = () => {
             </div>
 
             <div>
+              <label htmlFor="password" className="sr-only">Password</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <SafeIcon icon={FiLock} className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
+                  id="password"
                   name="password"
                   type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
                   required
                   value={formData.password}
                   onChange={handleChange}
@@ -146,6 +155,7 @@ const Register = () => {
                   type="button"
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   <SafeIcon
                     icon={showPassword ? FiEyeOff : FiEye}
@@ -156,13 +166,16 @@ const Register = () => {
             </div>
 
             <div>
+              <label htmlFor="confirmPassword" className="sr-only">Confirm Password</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <SafeIcon icon={FiLock} className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
+                  id="confirmPassword"
                   name="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
+                  autoComplete="new-password"
                   required
                   value={formData.confirmPassword}
                   onChange={handleChange}
@@ -173,6 +186,7 @@ const Register = () => {
                   type="button"
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
                 >
                   <SafeIcon
                     icon={showConfirmPassword ? FiEyeOff : FiEye}
